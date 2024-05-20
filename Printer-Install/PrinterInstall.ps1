@@ -58,10 +58,6 @@ $msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-I
 $modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
 $imageUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/FDSLogo.ico" 
 
-# Define the GitHub URLs for the files
-$msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
-$modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
-
 # Define the directory and temp paths
 $directoryPath = "C:\Program Files\FDS"
 $tempDirectoryPath = "$directoryPath\temp"
@@ -113,7 +109,7 @@ catch {
 }
 
 # Define a template for the command
-$commandTemplate = 'msiexec /i "{0}" /q DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}"'
+$commandTemplate = 'msiexec /i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}"'
 
 # Get the current IP address of the machine
 $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
@@ -215,7 +211,7 @@ function Show-PopupMessageWithImage {
     $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
     $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
     $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
-    $pictureBox.ImageLocation = $ImagePath
+    $pictureBox.ImageLocation = $TempImagePath
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Message
@@ -241,8 +237,9 @@ else {
     Write-Error "No printer configuration found for the current IP address: $CurrentIPAddress"
 }
 
-# Clean up: Delete the temp directory
+<# Clean up: Delete the temp directory
 if (Test-Path -Path $tempDirectoryPath) {
     Write-Log -Source "Script" -Message "Cleaning up temp directory at $tempDirectoryPath" -EntryType 'Information'
     Remove-Item -Path $tempDirectoryPath -Recurse -Force
 }
+#>
