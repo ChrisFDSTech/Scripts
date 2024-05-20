@@ -65,11 +65,15 @@ Write-Log -Source "Script" -Message "Temp directory path: $tempDirectoryPath" -E
 $tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
 $tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
 
+Write-Log -Source "Script" -Message "Before checking if temp directory exists." -EntryType 'Information'
 # Ensure the temp directory exists
 if (-Not (Test-Path -Path $tempDirectoryPath)) {
     Write-Log -Source "Script" -Message "Creating temp directory at $tempDirectoryPath" -EntryType 'Information'
     New-Item -ItemType "Directory" -Path "$tempDirectoryPath" -Force | Out-Null
     Write-Log -Source "Script" -Message "Temp directory created successfully." -EntryType 'Information'
+}
+else {
+    Write-Log -Source "Script" -Message "Temp directory already exists." -EntryType 'Information'
 }
 
 # Download the MSI file from GitHub to the temp directory with error handling
@@ -82,10 +86,6 @@ catch {
     exit 1
 }
 
-catch {
-    Write-Log -Source "Script" -Message "Failed to download MSI file: $_" -EntryType 'Error'
-    exit 1
-}
 
 # Download the model023.dat file from GitHub to the temp directory with error handling
 try {
