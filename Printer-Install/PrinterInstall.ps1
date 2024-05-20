@@ -18,6 +18,50 @@
     - Initial version of the script written.
 #>
 
+# Define the GitHub URLs for the files
+$msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
+$modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
+
+# Define the directory and temp paths
+$directoryPath = "C:\Program Files\FDS"
+$tempDirectoryPath = "$directoryPath\temp"
+$tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
+$tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
+$tempImagePath = "C:\Path\To\Your\Image\File.jpg" # Ensure this path is correct or update it accordingly
+
+# Ensure the temp directory exists
+if (-Not (Test-Path -Path $tempDirectoryPath)) {
+    Write-Log -Source "Script" -Message "Creating temp directory at $tempDirectoryPath" -EntryType 'Information'
+    New-Item -ItemType "Directory" -Path "$tempDirectoryPath" -Force | Out-Null
+}
+
+# Download the MSI file from GitHub to the temp directory with error handling
+try {
+    Write-Log -Source "Script" -Message "Downloading MSI file from $msiUrl to $tempMsiPath" -EntryType 'Information'
+    Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath -ErrorAction Stop
+}
+catch {
+    Write-Log -Source "Script" -Message "Failed to download MSI file: $_" -EntryType 'Error'
+    exit 1
+}
+
+# Download the model023.dat file from GitHub to the temp directory with error handling
+try {
+    Write-Log -Source "Script" -Message "Downloading model023.dat file from $modelDatUrl to $tempModelDatPath" -EntryType 'Information'
+    Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath -ErrorAction Stop
+}
+catch {
+    Write-Log -Source "Script" -Message "Failed to download model023.dat file: $_" -EntryType 'Error'
+    exit 1
+}
+
+# Define a template for the command
+$commandTemplate = 'msiexec /i "{0}" /q DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}"'
+
+# Get the current IP address of the machine
+$CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
+
+
 
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
@@ -71,52 +115,24 @@ $printerConfigs = @(
     @{ Name = 'TEST PRINT'; IPAddress = '172.30.112.200'
 )
 
-# Define the GitHub URLs for the files
-$msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
-$modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
+# Extract the first three octets of the current IP address
+$CurrentIPOctets = $CurrentIPAddress -replace '^(\d+\.\d+\.\d+)\.\d+$', '$1'
 
-# Define the directory and temp paths
-$directoryPath = "C:\Program Files\FDS"
-$tempDirectoryPath = "$directoryPath\temp"
-$tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
-$tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
-
-# Ensure the temp directory exists
-if (-Not (Test-Path -Path $tempDirectoryPath)) {
-    New-Item -ItemType "Directory" -Path "$tempDirectoryPath" -Force | Out-Null
-}
-
-# Download the MSI file from GitHub to the temp directory with error handling
-try {
-    Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath -ErrorAction Stop
-}
-catch {
-    Write-Error "Failed to download MSI file: $_"
-    exit 1
-}
-
-# Download the model023.dat file from GitHub to the temp directory with error handling
-try {
-    Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath -ErrorAction Stop
-}
-catch {
-    Write-Error "Failed to download model.dat file: $_"
-    exit 1
-}
-
-# Define a template for the command
-$commandTemplate = 'msiexec /i "{0}" /q DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}"'
-
-# Get the current IP address of the machine
-$CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
-
-# Iterate through the array to find a matching IP address and execute the command
+# Iterate through the array to find a matching IP address (based on first three octets) and execute the command
 $matched = $false
 foreach ($config in $printerConfigs) {
-    if ($CurrentIPAddress -eq $config.IPAddress) {
+    $ConfigIPOctets = $config.IPAddress -replace '^(\d+\.\d+\.\d+)\.\d+$', '$1'
+    if ($CurrentIPOctets -eq $ConfigIPOctets) {
+        Write-Log -Source "Script" -Message "Found matching IP address: $CurrentIPAddress (based on first three octets)" -EntryType 'Information'
         $command = [string]::Format($commandTemplate, $tempMsiPath, $config.Name, $config.IPAddress)
-        Invoke-Expression $command
-        $matched = $true
+        try {
+            Write-Log -Source "Script" -Message "Executing command: $command" -EntryType 'Information'
+            Invoke-Expression $command
+            $matched = $true
+            Write-Log -Source "Script" -Message "Printer $($config.Name) installed successfully" -EntryType 'Information'
+        } catch {
+            Write-Log -Source "Script" -Message "Failed to install printer: $_" -EntryType 'Error'
+        }
         break
     }
 }
@@ -166,6 +182,7 @@ else {
 }
 
 # Clean up: Delete the temp directory
-if (Test-Path -Path $tempDirectoryPath) {
+if (Test-Path -Path $tempDirectoryPath)) {
+    Write-Log -Source "Script" -Message "Deleting temp directory at $tempDirectoryPath" -EntryType 'Information'
     Remove-Item -Path $tempDirectoryPath -Recurse -Force
 }
