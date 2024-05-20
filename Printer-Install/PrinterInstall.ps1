@@ -18,16 +18,52 @@
     - Initial version of the script written.
 #>
 
+# Enhanced logging function
+function Write-Log {
+    [CmdletBinding()]
+    param(
+         [Parameter(Mandatory=$True)]
+         [ValidateNotNullOrEmpty()]
+         [string]$Source,
+ 
+         [Parameter()]
+         [ValidateNotNullOrEmpty()]
+         [int]$EventId = 0,
+                         
+         [Parameter(Mandatory=$True)]
+         [ValidateNotNullOrEmpty()]
+         [string]$Message,
+  
+         [Parameter(Mandatory=$True)]
+         [ValidateNotNullOrEmpty()]
+         [ValidateSet('Information','Warning','Error')]
+         [string]$EntryType = 'Information'
+     )
+ 
+    $LogFolder = "$($env:ProgramData)\IntuneLogging"
+    $LogFile = "$($LogFolder )\$($Source).log"
+    if(-not (Test-Path $LogFolder)) {
+        New-Item -Path $LogFolder -ItemType directory
+    }
+    if(-not (Test-Path $LogFile)) {
+        Add-Content -Path $LogFile -Value "Date;Level;Message" -ErrorAction SilentlyContinue
+    }
+    Add-Content -Path $LogFile -Value "$(Get-Date -Format "yyyy-MM-dd HH:mm:ss");$($EntryType);$($Message)" -ErrorAction SilentlyContinue
+}
+
+Write-Log -Source "Script" -Message "Script execution started" -EntryType 'Information'
+
 # Define the GitHub URLs for the files
 $msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
 $modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
+$imageUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/yourimage.jpg" # Update with the actual URL of the image file
 
 # Define the directory and temp paths
 $directoryPath = "C:\Program Files\FDS"
 $tempDirectoryPath = "$directoryPath\temp"
 $tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
 $tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
-$tempImagePath = "C:\Path\To\Your\Image\File.jpg" # Ensure this path is correct or update it accordingly
+$tempImagePath = [System.IO.Path]::Combine($tempDirectoryPath, "yourimage.jpg") # Ensure this path is correct or update it accordingly
 
 # Ensure the temp directory exists
 if (-Not (Test-Path -Path $tempDirectoryPath)) {
@@ -55,12 +91,21 @@ catch {
     exit 1
 }
 
+# Download the image file from GitHub to the temp directory with error handling
+try {
+    Write-Log -Source "Script" -Message "Downloading image file from $imageUrl to $tempImagePath" -EntryType 'Information'
+    Invoke-WebRequest -Uri $imageUrl -OutFile $tempImagePath -ErrorAction Stop
+}
+catch {
+    Write-Log -Source "Script" -Message "Failed to download image file: $_" -EntryType 'Error'
+    exit 1
+}
+
 # Define a template for the command
 $commandTemplate = 'msiexec /i "{0}" /q DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}"'
 
 # Get the current IP address of the machine
 $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
-
 
 
 # Define an array of hashtables with the printer configurations
@@ -117,11 +162,14 @@ $printerConfigs = @(
 
 # Extract the first three octets of the current IP address
 $CurrentIPOctets = $CurrentIPAddress -replace '^(\d+\.\d+\.\d+)\.\d+$', '$1'
+Write-Log -Source "Script" -Message "Current IP Address: $CurrentIPAddress" -EntryType 'Information'
+Write-Log -Source "Script" -Message "Extracted Octets: $CurrentIPOctets" -EntryType 'Information'
 
 # Iterate through the array to find a matching IP address (based on first three octets) and execute the command
 $matched = $false
 foreach ($config in $printerConfigs) {
     $ConfigIPOctets = $config.IPAddress -replace '^(\d+\.\d+\.\d+)\.\d+$', '$1'
+    Write-Log -Source "Script" -Message "Checking printer config: $($config.Name) with IP Octets: $ConfigIPOctets" -EntryType 'Information'
     if ($CurrentIPOctets -eq $ConfigIPOctets) {
         Write-Log -Source "Script" -Message "Found matching IP address: $CurrentIPAddress (based on first three octets)" -EntryType 'Information'
         $command = [string]::Format($commandTemplate, $tempMsiPath, $config.Name, $config.IPAddress)
@@ -174,6 +222,7 @@ function Show-PopupMessageWithImage {
 if ($matched) {
     $printerName = $config.Name
     $message = "The $printerName printer was installed."
+    Write-Log -Source "Script" -Message "Displaying popup: $message" -EntryType 'Information'
     Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
 }
 else {
@@ -182,7 +231,7 @@ else {
 }
 
 # Clean up: Delete the temp directory
-if (Test-Path -Path $tempDirectoryPath)) {
-    Write-Log -Source "Script" -Message "Deleting temp directory at $tempDirectoryPath" -EntryType 'Information'
+if (Test-Path -Path $tempDirectoryPath) {
+    Write-Log -Source "Script" -Message "Cleaning up temp directory at $tempDirectoryPath" -EntryType 'Information'
     Remove-Item -Path $tempDirectoryPath -Recurse -Force
 }
