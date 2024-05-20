@@ -56,7 +56,7 @@ Write-Log -Source "Script" -Message "Script execution started" -EntryType 'Infor
 # Define the GitHub URLs for the files
 $msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
 $modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
-$imageUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/yourimage.jpg" # Update with the actual URL of the image file
+$imageUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/FDSLogo.ico" 
 
 # Define the directory and temp paths
 $directoryPath = "C:\Program Files\FDS"
