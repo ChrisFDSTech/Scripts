@@ -18,103 +18,6 @@
     - Initial version of the script written.
 #>
 
-# Enhanced logging function
-function Write-Log {
-    [CmdletBinding()]
-    param(
-         [Parameter(Mandatory=$True)]
-         [ValidateNotNullOrEmpty()]
-         [string]$Source,
- 
-         [Parameter()]
-         [ValidateNotNullOrEmpty()]
-         [int]$EventId = 0,
-                         
-         [Parameter(Mandatory=$True)]
-         [ValidateNotNullOrEmpty()]
-         [string]$Message,
-  
-         [Parameter(Mandatory=$True)]
-         [ValidateNotNullOrEmpty()]
-         [ValidateSet('Information','Warning','Error')]
-         [string]$EntryType = 'Information'
-     )
- 
-    $LogFolder = "$($env:ProgramData)\IntuneLogging"
-    $LogFile = "$($LogFolder )\$($Source).log"
-    if(-not (Test-Path $LogFolder)) {
-        New-Item -Path $LogFolder -ItemType directory
-    }
-    if(-not (Test-Path $LogFile)) {
-        Add-Content -Path $LogFile -Value "Date;Level;Message" -ErrorAction SilentlyContinue
-    }
-    Add-Content -Path $LogFile -Value "$(Get-Date -Format "yyyy-MM-dd HH:mm:ss");$($EntryType);$($Message)" -ErrorAction SilentlyContinue
-}
-
-Write-Log -Source "Script" -Message "Script execution started" -EntryType 'Information'
-
-# Define the GitHub URLs for the files
-$msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
-$modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
-$imageUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/FDSLogo.ico" 
-
-# Define the directory and temp paths
-$directoryPath = "C:\Program Files\FDS"
-$tempDirectoryPath = "$directoryPath\temp"
-$tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
-$tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
-
-# Ensure the temp directory exists
-if (-Not (Test-Path -Path $tempDirectoryPath)) {
-    New-Item -ItemType "Directory" -Path "$tempDirectoryPath" -Force | Out-Null
-}
-
-# Download the MSI file from GitHub to the temp directory with error handling
-try {
-    Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath -UseBasicParsing -ErrorAction Stop
-}
-catch {
-    Write-Error "Failed to download MSI file: $_"
-    exit 1
-}
-
-# Download the MSI file from GitHub to the temp directory with error handling
-try {
-    Write-Log -Source "Script" -Message "Downloading MSI file from $msiUrl to $tempMsiPath" -EntryType 'Information'
-    Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath -ErrorAction Stop
-}
-catch {
-    Write-Log -Source "Script" -Message "Failed to download MSI file: $_" -EntryType 'Error'
-    exit 1
-}
-
-# Download the model023.dat file from GitHub to the temp directory with error handling
-try {
-    Write-Log -Source "Script" -Message "Downloading model023.dat file from $modelDatUrl to $tempModelDatPath" -EntryType 'Information'
-    Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath -ErrorAction Stop
-}
-catch {
-    Write-Log -Source "Script" -Message "Failed to download model023.dat file: $_" -EntryType 'Error'
-    exit 1
-}
-
-# Download the image file from GitHub to the temp directory with error handling
-try {
-    Write-Log -Source "Script" -Message "Downloading image file from $imageUrl to $tempImagePath" -EntryType 'Information'
-    Invoke-WebRequest -Uri $imageUrl -OutFile $tempImagePath -ErrorAction Stop
-}
-catch {
-    Write-Log -Source "Script" -Message "Failed to download image file: $_" -EntryType 'Error'
-    exit 1
-}
-
-# Define a template for the command
-$commandTemplate = 'msiexec /i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}"'
-
-# Get the current IP address of the machine
-$CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
-
-
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
     @{ Name = 'Azalea Manor'; IPAddress = '192.168.14.200' },
@@ -164,30 +67,49 @@ $printerConfigs = @(
     @{ Name = 'West Fayetteville'; IPAddress = '192.168.204.200' },
     @{ Name = 'Woodgreen'; IPAddress = '192.168.64.200' },
     @{ Name = 'Zebulon Green'; IPAddress = '192.168.103.200' },
-    @{ Name = 'TEST PRINT'; IPAddress = '172.30.125.200' }
+    @{ Name = 'Intune Printer'; IPAddress = '172.30.125.200' }
 )
 
-# Extract the first three octets of the current IP address
-$CurrentIPOctets = $CurrentIPAddress -replace '^(\d+\.\d+\.\d+)\.\d+$', '$1'
-Write-Log -Source "Script" -Message "Current IP Address: $CurrentIPAddress" -EntryType 'Information'
-Write-Log -Source "Script" -Message "Extracted Octets: $CurrentIPOctets" -EntryType 'Information'
 
-# Iterate through the array to find a matching IP address (based on first three octets) and execute the command
+# Define the GitHub URLs for the files
+$msiUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/6900.msi"
+$modelDatUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/model023.dat"
+
+# Define the directory and temp paths
+$directoryPath = "C:\ProgramData\FDS"
+$tempDirectoryPath = "$directoryPath\temp"
+$tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
+$tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
+
+# Ensure the temp directory exists
+if (-Not (Test-Path -Path $tempDirectoryPath)) {
+    New-Item -ItemType Directory -Path $tempDirectoryPath -Force
+}
+
+# Download the MSI file from GitHub to the temp directory
+Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
+
+# Download the model023.dat file from GitHub to the temp directory
+Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
+
+# Define a template for the command
+$commandTemplate = 'msiexec /i "{0}" /q DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}"'
+
+# Get the current IP address of the machine
+$CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
+
+# Truncate the current IP address to the first three octets
+$TruncatedCurrentIPAddress = $CurrentIPAddress -replace '\.\d+$'
+
+# Iterate through the array to find a matching IP address and execute the command
 $matched = $false
 foreach ($config in $printerConfigs) {
-    $ConfigIPOctets = $config.IPAddress -replace '^(\d+\.\d+\.\d+)\.\d+$', '$1'
-    Write-Log -Source "Script" -Message "Checking printer config: $($config.Name) with IP Octets: $ConfigIPOctets" -EntryType 'Information'
-    if ($CurrentIPOctets -eq $ConfigIPOctets) {
-        Write-Log -Source "Script" -Message "Found matching IP address: $CurrentIPAddress (based on first three octets)" -EntryType 'Information'
+    # Truncate the IP address from the configurations to the first three octets
+    $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
+    if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
         $command = [string]::Format($commandTemplate, $tempMsiPath, $config.Name, $config.IPAddress)
-        try {
-            Write-Log -Source "Script" -Message "Executing command: $command" -EntryType 'Information'
-            Invoke-Expression $command
-            $matched = $true
-            Write-Log -Source "Script" -Message "Printer $($config.Name) installed successfully" -EntryType 'Information'
-        } catch {
-            Write-Log -Source "Script" -Message "Failed to install printer: $_" -EntryType 'Error'
-        }
+        Invoke-Expression $command
+        $matched = $true
         break
     }
 }
@@ -211,7 +133,7 @@ function Show-PopupMessageWithImage {
     $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
     $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
     $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
-    $pictureBox.ImageLocation = $TempImagePath
+    $pictureBox.ImageLocation = $ImagePath
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Message
@@ -229,17 +151,51 @@ function Show-PopupMessageWithImage {
 if ($matched) {
     $printerName = $config.Name
     $message = "The $printerName printer was installed."
-    Write-Log -Source "Script" -Message "Displaying popup: $message" -EntryType 'Information'
     Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
 }
-else {
-    # If no matching IP address was found, show a popup message with error
-    Write-Error "No printer configuration found for the current IP address: $CurrentIPAddress"
-}
 
-<# Clean up: Delete the temp directory
+# Clean up: Delete the temp directory
 if (Test-Path -Path $tempDirectoryPath) {
-    Write-Log -Source "Script" -Message "Cleaning up temp directory at $tempDirectoryPath" -EntryType 'Information'
     Remove-Item -Path $tempDirectoryPath -Recurse -Force
 }
-#>
+
+# Define the directory and GitHub URL for the image
+$directoryPath = "C:\Program Files\FDS"
+$tempDirectoryPath = "$directoryPath\temp"
+$githubImageUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/FDSLogo.ico"
+$tempImagePath = [System.IO.Path]::Combine($tempDirectoryPath, "FDSLogo.ico")
+
+# Ensure the temp directory exists
+if (-Not (Test-Path -Path $tempDirectoryPath)) {
+    New-Item -ItemType Directory -Path $tempDirectoryPath -Force
+}
+
+# Download the image from GitHub
+Invoke-WebRequest -Uri $githubImageUrl -OutFile $tempImagePath
+
+# If no matching IP address was found, show a popup message
+if (-not $matched) {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "Printer Setup Issue"
+    $form.Size = New-Object System.Drawing.Size(400, 300)
+    $form.StartPosition = "CenterScreen"
+
+    $pictureBox = New-Object System.Windows.Forms.PictureBox
+    $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
+    $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
+    $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
+    $pictureBox.ImageLocation = $tempImagePath
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = "There was an issue with installing the printer, please call support at 910-483-5395"
+    $label.AutoSize = $true
+    $label.Location = New-Object System.Drawing.Point(50, 150)
+    $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+
+    $form.Controls.Add($pictureBox)
+    $form.Controls.Add($label)
+    $form.ShowDialog()
+}
