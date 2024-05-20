@@ -93,7 +93,7 @@ Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
 Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
 
 # Define a template for the command
-$commandTemplate = 'msiexec /i $tempMsiPath DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{0}" ISDEFAULTPRINTER="0" IPADDRESS="{1}" /qn /NORESTART'
+$commandTemplate = 'msiexec /i "C:\ProgramData\FDS\6900.msi" DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{0}" ISDEFAULTPRINTER="0" IPADDRESS="{1}" /qn /NORESTART'
 
 # Get the current IP address of the machine
 $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
