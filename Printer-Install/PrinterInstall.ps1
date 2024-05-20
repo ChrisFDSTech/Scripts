@@ -58,13 +58,15 @@ $msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-I
 $modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
 $imageUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/FDSLogo.ico" 
 
+# Inserted logging statement
+Write-Log -Source "Script" -Message "Before defining directory and temp paths." -EntryType 'Information'
 # Define the directory and temp paths
 $directoryPath = "C:\Program Files\FDS"
 $tempDirectoryPath = "$directoryPath\temp"
-Write-Log -Source "Script" -Message "Temp directory path: $tempDirectoryPath" -EntryType 'Information'
 $tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
 $tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
 
+# Inserted logging statement
 Write-Log -Source "Script" -Message "Before checking if temp directory exists." -EntryType 'Information'
 # Ensure the temp directory exists
 if (-Not (Test-Path -Path $tempDirectoryPath)) {
@@ -85,7 +87,6 @@ catch {
     Write-Log -Source "Script" -Message "Failed to download MSI file: $_" -EntryType 'Error'
     exit 1
 }
-
 
 # Download the model023.dat file from GitHub to the temp directory with error handling
 try {
