@@ -154,11 +154,6 @@ if ($matched) {
     Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
 }
 
-# Clean up: Delete the temp directory
-if (Test-Path -Path $tempDirectoryPath) {
-    Remove-Item -Path $tempDirectoryPath -Recurse -Force
-}
-
 # Define the directory and GitHub URL for the image
 $directoryPath = "C:\Program Files\FDS"
 $tempDirectoryPath = "$directoryPath\temp"
