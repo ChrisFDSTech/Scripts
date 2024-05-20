@@ -108,6 +108,7 @@ foreach ($config in $printerConfigs) {
     $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
     if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
         $command = [string]::Format($commandTemplate, $config.Name, $config.IPAddress)
+        Write-Host "Executing command: $command"
         Invoke-Expression $command
         $matched = $true
         break
