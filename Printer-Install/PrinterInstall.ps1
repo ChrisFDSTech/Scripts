@@ -87,10 +87,10 @@ if (-Not (Test-Path -Path $tempDirectoryPath)) {
 }
 
 # Download the MSI file from GitHub to the temp directory
-Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
+Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath -wait
 
 # Download the model023.dat file from GitHub to the temp directory
-Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
+Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath -wait
 
 # Define a template for the command
 $commandTemplate = 'msiexec "C:\ProgramData\FDS\6900.msi" DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{0}" ISDEFAULTPRINTER="0" IPADDRESS="{1}" /qn /NORESTART'
