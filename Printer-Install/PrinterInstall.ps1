@@ -61,14 +61,15 @@ $imageUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer
 # Define the directory and temp paths
 $directoryPath = "C:\Program Files\FDS"
 $tempDirectoryPath = "$directoryPath\temp"
+Write-Log -Source "Script" -Message "Temp directory path: $tempDirectoryPath" -EntryType 'Information'
 $tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
 $tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
-$tempImagePath = [System.IO.Path]::Combine($tempDirectoryPath, "yourimage.jpg") # Ensure this path is correct or update it accordingly
 
 # Ensure the temp directory exists
 if (-Not (Test-Path -Path $tempDirectoryPath)) {
     Write-Log -Source "Script" -Message "Creating temp directory at $tempDirectoryPath" -EntryType 'Information'
     New-Item -ItemType "Directory" -Path "$tempDirectoryPath" -Force | Out-Null
+    Write-Log -Source "Script" -Message "Temp directory created successfully." -EntryType 'Information'
 }
 
 # Download the MSI file from GitHub to the temp directory with error handling
@@ -76,6 +77,11 @@ try {
     Write-Log -Source "Script" -Message "Downloading MSI file from $msiUrl to $tempMsiPath" -EntryType 'Information'
     Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath -ErrorAction Stop
 }
+catch {
+    Write-Log -Source "Script" -Message "Failed to download MSI file: $_" -EntryType 'Error'
+    exit 1
+}
+
 catch {
     Write-Log -Source "Script" -Message "Failed to download MSI file: $_" -EntryType 'Error'
     exit 1
