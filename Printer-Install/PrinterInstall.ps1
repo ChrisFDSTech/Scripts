@@ -71,13 +71,13 @@ $printerConfigs = @(
 )
 
 # Define the GitHub URLs for the files
-$msiUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/20000.msi"
-$modelDatUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/model023.dat"
+$msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
+$modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
 
 # Define the directory and temp paths
 $directoryPath = "C:\Program Files\FDS"
 $tempDirectoryPath = "$directoryPath\temp"
-$tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "20000.msi")
+$tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
 $tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
 
 # Ensure the temp directory exists
@@ -92,7 +92,7 @@ Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
 Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
 
 # Define a template for the command
-$commandTemplate = 'msiexec /i "{0}" /q DRIVERNAME="Brother MFC-L20000DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}"'
+$commandTemplate = 'msiexec /i "{0}" /q DRIVERNAME="Brother MFC-6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}"'
 
 # Get the current IP address of the machine
 $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
@@ -156,7 +156,7 @@ if (Test-Path -Path $tempDirectoryPath) {
 # Define the directory and GitHub URL for the image
 $directoryPath = "C:\Program Files\FDS"
 $tempDirectoryPath = "$directoryPath\temp"
-$githubImageUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/FDSLogo.ico"
+$githubImageUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/FDSLogo.ico"
 $tempImagePath = [System.IO.Path]::Combine($tempDirectoryPath, "FDSLogo.ico")
 
 # Ensure the temp directory exists
