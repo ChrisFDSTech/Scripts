@@ -107,7 +107,7 @@ foreach ($config in $printerConfigs) {
     # Truncate the IP address from the configurations to the first three octets
     $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
     if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
-        $command = [string]::Format($commandTemplate, $config.Name, $config.IPAddress)
+        $command = [string]::Format($commandTemplate, $tempMsiPath, $config.Name, $config.IPAddress)
         Invoke-Expression $command
         $matched = $true
         break
