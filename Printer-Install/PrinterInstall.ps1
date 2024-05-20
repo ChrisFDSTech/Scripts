@@ -164,7 +164,7 @@ $printerConfigs = @(
     @{ Name = 'West Fayetteville'; IPAddress = '192.168.204.200' },
     @{ Name = 'Woodgreen'; IPAddress = '192.168.64.200' },
     @{ Name = 'Zebulon Green'; IPAddress = '192.168.103.200' },
-    @{ Name = 'TEST PRINT'; IPAddress = '172.30.125.200' },
+    @{ Name = 'TEST PRINT'; IPAddress = '172.30.125.200' }
 )
 
 # Extract the first three octets of the current IP address
