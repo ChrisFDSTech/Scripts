@@ -26,10 +26,17 @@ function Install-RequiredModule {
 
     $installedModules = @()
 
+    # Install the NuGet package provider if it's not already installed
+    $nugetProvider = Get-PackageProvider -ListAvailable | Where-Object { $_.Name -eq 'NuGet' -and $_.Version -ge '2.8.5.208' }
+    if (-not $nugetProvider) {
+        Write-Host "Installing NuGet package provider..."
+        Install-PackageProvider -Name NuGet -Force > $null
+    }
+
     foreach ($moduleName in $ModuleNames) {
         $module = Get-Module -ListAvailable -Name $moduleName
         if (-not $module) {
-            Write-Host "Installing $moduleName module......."
+            Write-Host "Installing $moduleName module..."
             try {
                 Install-Module -Name $moduleName -Force -Scope CurrentUser > $null
                 $installedModules += $moduleName
@@ -50,6 +57,7 @@ Install-RequiredModule -ModuleNames @('WindowsInstaller', 'NuGet')
 
 # Import the WindowsInstaller module
 Import-Module WindowsInstaller
+
 
 
 # Define an array of hashtables with the printer configurations
