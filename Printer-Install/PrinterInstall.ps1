@@ -125,6 +125,7 @@ $directoryPath = "C:\ProgramData\FDS"
 $tempDirectoryPath = Join-Path $directoryPath "temp"
 $tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
 $tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
+$tempImagePath = Join-Path $tempDirectoryPath "printer-icon.png"  # Define a default image path
 
 # Ensure the temp directory exists
 if (-not (Test-Path $tempDirectoryPath)) {
@@ -160,6 +161,43 @@ if ($actualModelDatSize -ne $expectedModelDatSize) {
     Write-Warning "model023.dat file download incomplete. Expected size: $expectedModelDatSize, Actual size: $actualModelDatSize"
     # You can choose to re-download the file or skip the installation process here
 }
+
+# Define the Show-PopupMessageWithImage function
+function Show-PopupMessageWithImage {
+    param(
+        [string]$Message,
+        [string]$Title,
+        [string]$ImagePath
+    )
+
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = $Title
+    $form.Size = New-Object System.Drawing.Size(400, 300)
+    $form.StartPosition = "CenterScreen"
+
+    $pictureBox = New-Object System.Windows.Forms.PictureBox
+    $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
+    $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
+    $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
+    $pictureBox.ImageLocation = $ImagePath
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = $Message
+    $label.AutoSize = $true
+    $label.Location = New-Object System.Drawing.Point(50, 150)
+    $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+
+    $form.Controls.Add($pictureBox)
+    $form.Controls.Add($label)
+    $form.ShowDialog()
+}
+
+
+# Download the model023.dat file from GitHub to the temp directory
+Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
 
 
 # Define a template for the command
