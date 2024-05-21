@@ -70,6 +70,22 @@ $printerConfigs = @(
     @{ Name = 'Intune Printer'; IPAddress = '172.30.125.200' }
 )
 
+# Define the GitHub URL for the ZIP file
+$zipFileUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/files.zip"
+
+# Define the directory and temp paths
+$directoryPath = "C:\ProgramData\FDS"
+$tempDirectoryPath = Join-Path $directoryPath "temp"
+$tempZipFilePath = Join-Path $tempDirectoryPath "files.zip"
+$tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
+$tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
+$tempImagePath = Join-Path $tempDirectoryPath "printer-icon.png"
+
+# Download the ZIP file from GitHub to the temp directory
+Invoke-WebRequest -Uri $zipFileUrl -OutFile $tempZipFilePath
+
+# Extract the files from the ZIP archive
+Expand-Archive -Path $tempZipFilePath -DestinationPath $tempDirectoryPath -Force
 
 <# Define the GitHub URLs for the files
 $msiUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/6900.msi"
