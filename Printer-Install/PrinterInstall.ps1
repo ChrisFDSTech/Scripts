@@ -124,10 +124,24 @@ $modelDatUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Instal
 $directoryPath = "C:\ProgramData\FDS"
 $tempDirectoryPath = "$directoryPath\temp"
 $githubImageUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/FDSLogo.png"
-$tempImagePath = [System.IO.Path]::Combine($tempDirectoryPath, "FDSLogo.png")
+$tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
 
-# Download the image from GitHub
-Invoke-WebRequest -Uri $githubImageUrl -OutFile $tempImagePath
+try {
+    Invoke-WebRequest -Uri $githubImageUrl -OutFile $tempImagePath -ErrorAction Stop
+}
+catch {
+    Write-Warning "Failed to download image: $_"
+    $tempImagePath = $null
+}
+
+if ($tempImagePath -and (Test-Path $tempImagePath)) {
+    $imageExtension = [System.IO.Path]::GetExtension($tempImagePath).ToLower()
+    $validImageExtensions = @(".jpg", ".jpeg", ".png", ".bmp", ".gif")
+    if ($validImageExtensions -notcontains $imageExtension) {
+        Write-Warning "Invalid image file format: $imageExtension"
+        $tempImagePath = $null
+    }
+}
 
 $tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
 $tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
@@ -181,11 +195,14 @@ function Show-PopupMessageWithImage {
     $form.Size = New-Object System.Drawing.Size(400, 300)
     $form.StartPosition = "CenterScreen"
 
-    $pictureBox = New-Object System.Windows.Forms.PictureBox
-    $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
-    $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
-    $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
-    $pictureBox.ImageLocation = $tempImagePath
+    if ($tempImagePath) {
+        $pictureBox = New-Object System.Windows.Forms.PictureBox
+        $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
+        $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
+        $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
+        $pictureBox.ImageLocation = $tempImagePath
+        $form.Controls.Add($pictureBox)
+    }
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Message
@@ -198,13 +215,13 @@ function Show-PopupMessageWithImage {
     $okButton.Location = New-Object System.Drawing.Point(150, 220)
     $okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
 
-    $form.Controls.Add($pictureBox)
     $form.Controls.Add($label)
     $form.Controls.Add($okButton)
     $form.AcceptButton = $okButton
 
     $form.ShowDialog() | Out-Null
 }
+
 
 
 # If a matching IP address was found and printer installed, show a popup message with the printer name
