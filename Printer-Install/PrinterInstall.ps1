@@ -26,6 +26,7 @@ if (-not $windowsInstallerModule) {
     Write-Host "Installing WindowsInstaller module..."
     try {
         Install-Module -Name WindowsInstaller -Force -Scope CurrentUser > $null
+        Install-PackageProvider -Name NuGet -Force -Scope CurrentUser > $null
     }
     catch {
         Write-Warning "Failed to install WindowsInstaller module: $_"
