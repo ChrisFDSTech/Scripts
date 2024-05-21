@@ -16,9 +16,18 @@
 .RELEASE NOTES
     Version 1.0 (5/17/2024):
     - Initial version of the script written.
-    Version 2.0 (5/17/2024
+    
+    Version 2.0 (5/20/2024
     - Fixed Issue with logo (Changed from .ico to .png)
     - Changed the way the downloads were retrieved with WindowsInstallModule
+    - Added a popup windows for the printer install
+
+    Version 3.0 (5/21/2024)
+    - Changed to Invoke-WebRequest cmdlet
+    - Created a more appealing popup window
+    - Fixed issue with exit code: 1619
+    - Fixed popup window with ShowDiag
+    
     
 #>
 
@@ -133,7 +142,7 @@ function Show-PopupMessageWithImage {
     $form.Text = $Title
     $form.Size = New-Object System.Drawing.Size(500, 400)
     $form.StartPosition = "CenterScreen"
-    $form.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $form.Font = New-Object System.Drawing.Font("Segoe UI", 12)
     $form.BackColor = [System.Drawing.Color]::FromArgb(255, 255, 255)
 
     $pictureBox = New-Object System.Windows.Forms.PictureBox
