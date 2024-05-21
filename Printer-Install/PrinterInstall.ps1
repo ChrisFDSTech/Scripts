@@ -18,9 +18,22 @@
     - Initial version of the script written.
 #>
 
-#Install Windows Installer Module
-Install-Module -Name WindowsInstaller -Force -Scope CurrentUser
-Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
+# Check if the WindowsInstaller module is available
+$windowsInstallerModule = Get-Module -ListAvailable -Name WindowsInstaller
+
+# If the module is not available, try to install it
+if (-not $windowsInstallerModule) {
+    Write-Host "Installing WindowsInstaller module..."
+    try {
+        Install-Module -Name WindowsInstaller -Force -Scope CurrentUser > $null
+    }
+    catch {
+        Write-Warning "Failed to install WindowsInstaller module: $_"
+        exit 1
+    }
+}
+
+# Import the WindowsInstaller module
 Import-Module WindowsInstaller
 
 
