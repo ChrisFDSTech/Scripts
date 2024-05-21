@@ -89,9 +89,9 @@ $printerConfigs = @(
 )
 
 # Define the GitHub URLs for the files
-$msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/6900.msi"
-$modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/model023.dat"
-$ImageURL = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/FDSLogo.png"
+$msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
+$modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
+$ImageURL = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/FDSLogo.png"
 
 # Define the directory and temp paths
 $directoryPath = "C:\ProgramData\FDS"
