@@ -45,6 +45,9 @@ function Install-RequiredModule {
                 Write-Warning "Failed to install $moduleName module: $_"
             }
         }
+        else {
+            Write-Host "$moduleName module is already installed."
+        }
     }
 
     if ($installedModules.Count -gt 0) {
