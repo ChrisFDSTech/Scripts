@@ -82,6 +82,12 @@ $modelDatUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Instal
 # Define the directory and temp paths
 $directoryPath = "C:\ProgramData\FDS"
 $tempDirectoryPath = "$directoryPath\temp"
+$githubImageUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/FDSLogo.png"
+$tempImagePath = [System.IO.Path]::Combine($tempDirectoryPath, "FDSLogo.png")
+
+# Download the image from GitHub
+Invoke-WebRequest -Uri $githubImageUrl -OutFile $tempImagePath
+
 $tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
 $tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
 
@@ -139,7 +145,7 @@ function Show-PopupMessageWithImage {
     $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
     $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
     $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
-    $pictureBox.ImageLocation = $ImagePath
+    $pictureBox.ImageLocation = $tempImagePath
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Message
