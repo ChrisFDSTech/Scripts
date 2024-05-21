@@ -125,7 +125,7 @@ function Show-PopupMessageWithImage {
     param(
         [string]$Message,
         [string]$Title,
-        [string]$tempImagePath
+        [string]$ImagePath
     )
 
     Add-Type -AssemblyName System.Windows.Forms
@@ -140,7 +140,7 @@ function Show-PopupMessageWithImage {
     $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
     $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
     $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
-    $pictureBox.ImageLocation = $tempImagePath
+    $pictureBox.ImageLocation = $ImagePath
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Message
@@ -148,9 +148,15 @@ function Show-PopupMessageWithImage {
     $label.Location = New-Object System.Drawing.Point(50, 150)
     $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 
-    $form.Controls.Add($pictureBox)
-    $form.Controls.Add($label)
-    $form.ShowDialog()
+    $okButton = New-Object System.Windows.Forms.Button
+    $okButton.Text = "OK"
+    $okButton.Location = New-Object System.Drawing.Point(150, 220)
+    $okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+
+    $form.Controls.AddRange(@($pictureBox, $label, $okButton))
+    $form.AcceptButton = $okButton
+
+    $form.ShowDialog() | Out-Null
 }
 
 # Define a template for the command
