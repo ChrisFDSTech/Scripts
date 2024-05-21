@@ -125,7 +125,7 @@ function Show-PopupMessageWithImage {
     param(
         [string]$Message,
         [string]$Title,
-        [string]$ImagePath
+        [string]$tempImagePath
     )
 
     Add-Type -AssemblyName System.Windows.Forms
@@ -142,7 +142,7 @@ function Show-PopupMessageWithImage {
     $pictureBox.Size = New-Object System.Drawing.Size(150, 150)
     $pictureBox.Location = New-Object System.Drawing.Point(175, 20)
     $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
-    $pictureBox.ImageLocation = $ImagePath
+    $pictureBox.ImageLocation = $tempImagePath
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Message
