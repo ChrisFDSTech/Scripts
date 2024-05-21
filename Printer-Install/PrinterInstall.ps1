@@ -29,7 +29,7 @@ function Install-RequiredModule {
     foreach ($moduleName in $ModuleNames) {
         $module = Get-Module -ListAvailable -Name $moduleName
         if (-not $module) {
-            Write-Host "Installing $moduleName module..."
+            Write-Host "Installing $moduleName module......."
             try {
                 Install-Module -Name $moduleName -Force -Scope CurrentUser > $null
                 $installedModules += $moduleName
