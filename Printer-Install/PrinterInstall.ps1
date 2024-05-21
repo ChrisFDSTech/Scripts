@@ -3,7 +3,7 @@
     This script checks the endpoint for the current IP address and installs the associated printer with its properties.
 
 .INPUTS
-    Installation from Company Portal.
+    Installation from Company Portal..
 
 .OUTPUTS
     Intune scripts are executed to install printers.
