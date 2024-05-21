@@ -18,51 +18,6 @@
     - Initial version of the script written.
 #>
 
-function Install-RequiredModule {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string[]]$ModuleNames
-    )
-
-    $installedModules = @()
-
-    # Install the NuGet package provider if it's not already installed
-    $nugetProvider = Get-PackageProvider -ListAvailable | Where-Object { $_.Name -eq 'NuGet' -and $_.Version -ge '2.8.5.208' }
-    if (-not $nugetProvider) {
-        Write-Host "Installing NuGet package provider..."
-        Install-PackageProvider -Name NuGet -Force > $null
-    }
-
-    foreach ($moduleName in $ModuleNames) {
-        $module = Get-Module -ListAvailable -Name $moduleName
-        if (-not $module) {
-            Write-Host "Installing $moduleName module..."
-            try {
-                Install-Module -Name $moduleName -Force -Scope CurrentUser > $null
-                $installedModules += $moduleName
-            }
-            catch {
-                Write-Warning "Failed to install $moduleName module: $_"
-            }
-        }
-        else {
-            Write-Host "$moduleName module is already installed."
-        }
-    }
-
-    if ($installedModules.Count -gt 0) {
-        Write-Host "Installed modules: $($installedModules -join ', ')"
-    }
-}
-
-# Install required modules
-Install-RequiredModule -ModuleNames @('WindowsInstaller', 'NuGet')
-
-# Import the WindowsInstaller module
-Import-Module WindowsInstaller
-
-
-
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
     @{ Name = 'Azalea Manor'; IPAddress = '192.168.14.200' },
@@ -116,7 +71,7 @@ $printerConfigs = @(
 )
 
 
-# Define the GitHub URLs for the files
+<# Define the GitHub URLs for the files
 $msiUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/6900.msi"
 $modelDatUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/model023.dat"
 
@@ -138,29 +93,12 @@ if (-not (Test-Path $tempDirectoryPath)) {
     }
 }
 
-# Define the expected file sizes
-$expectedMsiSize = 20151744  # 20 MB
-$expectedModelDatSize = 3370 # 4 KB
-
 # Download the MSI file from GitHub to the temp directory
 Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
 
-# Check if the MSI file was downloaded completely
-$actualMsiSize = (Get-Item $tempMsiPath).Length
-if ($actualMsiSize -ne $expectedMsiSize) {
-    Write-Warning "MSI file download incomplete. Expected size: $expectedMsiSize, Actual size: $actualMsiSize"
-    # You can choose to re-download the file or skip the installation process here
-}
-
 # Download the model023.dat file from GitHub to the temp directory
 Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
-
-# Check if the model023.dat file was downloaded completely
-$actualModelDatSize = (Get-Item $tempModelDatPath).Length
-if ($actualModelDatSize -ne $expectedModelDatSize) {
-    Write-Warning "model023.dat file download incomplete. Expected size: $expectedModelDatSize, Actual size: $actualModelDatSize"
-    # You can choose to re-download the file or skip the installation process here
-}
+#>
 
 # Define the Show-PopupMessageWithImage function
 function Show-PopupMessageWithImage {
@@ -194,11 +132,6 @@ function Show-PopupMessageWithImage {
     $form.Controls.Add($label)
     $form.ShowDialog()
 }
-
-
-# Download the model023.dat file from GitHub to the temp directory
-Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
-
 
 # Define a template for the command
 $commandTemplate = '/i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}" /qn /NORESTART'
