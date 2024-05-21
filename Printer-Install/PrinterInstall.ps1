@@ -19,7 +19,7 @@
 #>
 
 #Install Windows Installer Module
-Install-Module -Name Microsoft.PowerShell.PackageManagement
+Install-Module -Name Microsoft.PowerShell.PackageManagement -Force -AllowClobber
 Import-Module WindowsInstaller
 
 # Define an array of hashtables with the printer configurations
