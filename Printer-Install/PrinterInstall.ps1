@@ -141,7 +141,7 @@ Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
 Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
 
 # Define a template for the command
-$commandTemplate = 'msiexec /i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}" /qn /NORESTART'
+$commandTemplate = '/i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}" /qn /NORESTART'
 
 # Get the current IP address of the machine
 $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
@@ -155,7 +155,7 @@ foreach ($config in $printerConfigs) {
     # Truncate the IP address from the configurations to the first three octets
     $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
     if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
-        $arguments = [string]::Format($commandTemplate, $tempMsiPath, $config.Name, $config.IPAddress)
+        $arguments = $commandTemplate -f $tempMsiPath, $config.Name, $config.IPAddress
         Write-Host "Executing command: msiexec $arguments"
         Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow
 
