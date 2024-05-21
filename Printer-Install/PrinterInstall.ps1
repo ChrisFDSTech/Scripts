@@ -110,6 +110,17 @@ $tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
 $tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
 
 # Ensure the temp directory exists
+if (-not (Test-Path $directoryPath)) {
+    try {
+        New-Item -ItemType Directory -Path $directoryPath -Force | Out-Null
+    }
+    catch {
+        Write-Warning "Failed to create directory: $directoryPath"
+        Write-Warning $_.Exception.Message
+    }
+}
+
+# Ensure the temp directory exists
 if (-not (Test-Path $tempDirectoryPath)) {
     try {
         New-Item -ItemType Directory -Path $tempDirectoryPath -Force | Out-Null
@@ -119,7 +130,6 @@ if (-not (Test-Path $tempDirectoryPath)) {
         Write-Warning $_.Exception.Message
     }
 }
-
 # Download the MSI file, .dat File, and the Logo file from GitHub to the temp directory
 Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
 Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
