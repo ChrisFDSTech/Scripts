@@ -246,3 +246,7 @@ if (-not $matched) {
     $form.Controls.Add($label)
     $form.ShowDialog()
 }
+
+# Start a new PowerShell job to delete the temp directory after 15 minutes
+$job = Start-Job -ScriptBlock ${Function:Remove-TempDirectory} -ArgumentList $tempDirectoryPath, 15
+
