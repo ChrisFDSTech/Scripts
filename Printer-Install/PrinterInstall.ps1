@@ -18,6 +18,9 @@
     - Initial version of the script written.
 #>
 
+#Import Windows Installer Module
+Import-Module WindowsInstaller
+
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
     @{ Name = 'Azalea Manor'; IPAddress = '192.168.14.200' },
@@ -107,9 +110,10 @@ foreach ($config in $printerConfigs) {
     # Truncate the IP address from the configurations to the first three octets
     $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
     if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
-        $command = [string]::Format($commandTemplate, $tempMsiPath, $config.Name, $config.IPAddress)
-        Write-Host "Executing command: $command"
-        Invoke-Expression $command
+        $arguments = [string]::Format($commandTemplate, $tempMsiPath, $config.Name, $config.IPAddress)
+        Write-Host "Executing command: msiexec $arguments"
+        Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow
+
         $matched = $true
         break
     }
