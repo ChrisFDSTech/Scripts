@@ -158,8 +158,8 @@ if ($matched) {
 # Define the directory and GitHub URL for the image
 $directoryPath = "C:\Program Files\FDS"
 $tempDirectoryPath = "$directoryPath\temp"
-$githubImageUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/FDSLogo.ico"
-$tempImagePath = [System.IO.Path]::Combine($tempDirectoryPath, "FDSLogo.ico")
+$githubImageUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/FDSLogo.png"
+$tempImagePath = [System.IO.Path]::Combine($tempDirectoryPath, "FDSLogo.png")
 
 # Ensure the temp directory exists
 if (-Not (Test-Path -Path $tempDirectoryPath)) {
