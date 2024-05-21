@@ -109,8 +109,6 @@ $tempDirectoryPath = Join-Path $directoryPath "temp"
 $tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
 $tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
 $tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
-$printersFilePath = Join-Path $directoryPath "Printers.txt"
-
 
 # Ensure the temp directory exists
 if (-not (Test-Path $directoryPath)) {
@@ -207,22 +205,21 @@ foreach ($config in $printerConfigs) {
         $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
         $process.WaitForExit()
 
-if ($process.ExitCode -eq 0) {
-    try {
-        Add-Content -Path $printersFilePath -Value $config.Name -ErrorAction Stop
-        Write-Host "Printer name '$($config.Name)' added to $printersFilePath"
+        if ($process.ExitCode -ne 0) {
+            $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
+            Write-Warning $errorMessage
+            Add-Content -Path $logFilePath -Value $errorMessage
+            Add-Content -Path $logFilePath -Value $process.StandardOutput
+            Add-Content -Path $logFilePath -Value $process.StandardError
+        } else {
+            $message = "The $($config.Name) printer was installed."
+            Write-Host $message
+            Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
+        }
+        $matched = $true
+        break
     }
-    catch {
-        Write-Warning "Failed to write printer name to $printersFilePath: $_"
-    }
-} else {
-    $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
-    Write-Warning $errorMessage
-    Add-Content -Path $logFilePath -Value $errorMessage
-    Add-Content -Path $logFilePath -Value $process.StandardOutput
-    Add-Content -Path $logFilePath -Value $process.StandardError
 }
-
 
 # If no matching IP address was found, show a popup message
 if (-not $matched) {
@@ -253,4 +250,4 @@ if (-not $matched) {
 
 # Start a new PowerShell job to delete the temp directory after 15 minutes
 $job = Start-Job -ScriptBlock ${Function:Remove-TempDirectory} -ArgumentList $tempDirectoryPath, 10
-
+$job
