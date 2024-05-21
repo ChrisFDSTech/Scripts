@@ -122,33 +122,19 @@ $modelDatUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Instal
 
 # Define the directory and temp paths
 $directoryPath = "C:\ProgramData\FDS"
-$tempDirectoryPath = "$directoryPath\temp"
-$githubImageUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/FDSLogo.png"
-$tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
-
-try {
-    Invoke-WebRequest -Uri $githubImageUrl -OutFile $tempImagePath -ErrorAction Stop
-}
-catch {
-    Write-Warning "Failed to download image: $_"
-    $tempImagePath = $null
-}
-
-if ($tempImagePath -and (Test-Path $tempImagePath)) {
-    $imageExtension = [System.IO.Path]::GetExtension($tempImagePath).ToLower()
-    $validImageExtensions = @(".jpg", ".jpeg", ".png", ".bmp", ".gif")
-    if ($validImageExtensions -notcontains $imageExtension) {
-        Write-Warning "Invalid image file format: $imageExtension"
-        $tempImagePath = $null
-    }
-}
-
-$tempMsiPath = [System.IO.Path]::Combine($tempDirectoryPath, "6900.msi")
-$tempModelDatPath = [System.IO.Path]::Combine($tempDirectoryPath, "model023.dat")
+$tempDirectoryPath = Join-Path $directoryPath "temp"
+$tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
+$tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
 
 # Ensure the temp directory exists
-if (-Not (Test-Path -Path $tempDirectoryPath)) {
-    New-Item -ItemType Directory -Path $tempDirectoryPath -Force
+if (-not (Test-Path $tempDirectoryPath)) {
+    try {
+        New-Item -ItemType Directory -Path $tempDirectoryPath -Force | Out-Null
+    }
+    catch {
+        Write-Warning "Failed to create directory: $tempDirectoryPath"
+        Write-Warning $_.Exception.Message
+    }
 }
 
 # Download the MSI file from GitHub to the temp directory
@@ -172,78 +158,28 @@ foreach ($config in $printerConfigs) {
     # Truncate the IP address from the configurations to the first three octets
     $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
     if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
+        $logFilePath = Join-Path $tempDirectoryPath "printer-install.log"
+
         $arguments = $commandTemplate -f $tempMsiPath, $config.Name, $config.IPAddress
         Write-Host "Executing command: msiexec $arguments"
-        Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow
+        $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
+        $process.WaitForExit()
 
+        if ($process.ExitCode -ne 0) {
+            $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
+            Write-Warning $errorMessage
+            Add-Content -Path $logFilePath -Value $errorMessage
+            Add-Content -Path $logFilePath -Value $process.StandardOutput
+            Add-Content -Path $logFilePath -Value $process.StandardError
+        } else {
+            $message = "The $($config.Name) printer was installed."
+            Write-Host $message
+            Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
+        }
         $matched = $true
         break
     }
 }
-
-# Define the function to display a pop-up message with an image
-function Show-PopupMessageWithImage {
-    param(
-        [string]$Message,
-        [string]$Title
-    )
-    Add-Type -AssemblyName System.Windows.Forms
-    Add-Type -AssemblyName System.Drawing
-
-    $form = New-Object System.Windows.Forms.Form
-    $form.Text = $Title
-    $form.Size = New-Object System.Drawing.Size(400, 300)
-    $form.StartPosition = "CenterScreen"
-
-    if ($tempImagePath) {
-        $pictureBox = New-Object System.Windows.Forms.PictureBox
-        $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
-        $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
-        $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
-        $pictureBox.ImageLocation = $tempImagePath
-        $form.Controls.Add($pictureBox)
-    }
-
-    $label = New-Object System.Windows.Forms.Label
-    $label.Text = $Message
-    $label.AutoSize = $true
-    $label.Location = New-Object System.Drawing.Point(50, 150)
-    $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-
-    $okButton = New-Object System.Windows.Forms.Button
-    $okButton.Text = "OK"
-    $okButton.Location = New-Object System.Drawing.Point(150, 220)
-    $okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
-
-    $form.Controls.Add($label)
-    $form.Controls.Add($okButton)
-    $form.AcceptButton = $okButton
-
-    $form.ShowDialog() | Out-Null
-}
-
-
-
-# If a matching IP address was found and printer installed, show a popup message with the printer name
-if ($matched) {
-    $printerName = $config.Name
-    $message = "The $printerName printer was installed."
-    Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
-}
-
-# Define the directory and GitHub URL for the image
-$directoryPath = "C:\Program Files\FDS"
-$tempDirectoryPath = "$directoryPath\temp"
-$githubImageUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/FDSLogo.png"
-$tempImagePath = [System.IO.Path]::Combine($tempDirectoryPath, "FDSLogo.png")
-
-# Ensure the temp directory exists
-if (-Not (Test-Path -Path $tempDirectoryPath)) {
-    New-Item -ItemType Directory -Path $tempDirectoryPath -Force
-}
-
-# Download the image from GitHub
-Invoke-WebRequest -Uri $githubImageUrl -OutFile $tempImagePath
 
 # If no matching IP address was found, show a popup message
 if (-not $matched) {
