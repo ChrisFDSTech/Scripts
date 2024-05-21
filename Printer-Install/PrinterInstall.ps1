@@ -18,7 +18,8 @@
     - Initial version of the script written.
 #>
 
-#Import Windows Installer Module
+#Install Windows Installer Module
+Install-Module -Name Microsoft.PowerShell.PackageManagement
 Import-Module WindowsInstaller
 
 # Define an array of hashtables with the printer configurations
