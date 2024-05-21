@@ -19,8 +19,10 @@
 #>
 
 #Install Windows Installer Module
-Install-Module -Name Microsoft.PowerShell.PackageManagement -Force -AllowClobber
+Install-Module -Name Microsoft.PowerShell.PackageManagement -Force -Scope CurrentUser
+Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
 Import-Module WindowsInstaller
+
 
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
