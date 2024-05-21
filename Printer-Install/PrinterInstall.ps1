@@ -9,14 +9,29 @@
     Intune scripts are executed to install printers.
 
 .NOTES
-    Version:        1.0
+    Version:        10.0
     Author:         Chris Braeuer
     Creation Date:  5/17/2024
 
 .RELEASE NOTES
     Version 1.0 (5/17/2024):
     - Initial version of the script written.
+    Version 2.0 (5/17/2024
 #>
+
+$wgetPath = Get-Command wget -ErrorAction SilentlyContinue
+
+if (-not $wgetPath) {
+    Write-Host "wget is not installed. Installing wget using Chocolatey..."
+    try {
+        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+        choco install wget -y
+    }
+    catch {
+        Write-Error "Failed to install wget: $_"
+        exit 1
+    }
+}
 
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
@@ -70,33 +85,17 @@ $printerConfigs = @(
     @{ Name = 'Intune Printer'; IPAddress = '172.30.125.200' }
 )
 
-# Define the GitHub URL for the ZIP file
-$zipFileUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/PrinterInstall.ps1"
+# Define the GitHub URLs for the files
+$msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/6900.msi"
+$modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/model023.dat"
+$ImageURL = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/FDSLogo.png"
 
 # Define the directory and temp paths
 $directoryPath = "C:\ProgramData\FDS"
 $tempDirectoryPath = Join-Path $directoryPath "temp"
-$tempZipFilePath = Join-Path $tempDirectoryPath "files.zip"
 $tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
 $tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
 $tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
-
-# Download the ZIP file from GitHub to the temp directory
-Invoke-WebRequest -Uri $zipFileUrl -OutFile $tempZipFilePath
-
-# Extract the files from the ZIP archive
-Expand-Archive -Path $tempZipFilePath -DestinationPath $tempDirectoryPath -Force
-
-<# Define the GitHub URLs for the files
-$msiUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/6900.msi"
-$modelDatUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/model023.dat"
-
-# Define the directory and temp paths
-$directoryPath = "C:\ProgramData\FDS"
-$tempDirectoryPath = Join-Path $directoryPath "temp"
-$tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
-$tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
-$tempImagePath = Join-Path $tempDirectoryPath "printer-icon.png"  # Define a default image path
 
 # Ensure the temp directory exists
 if (-not (Test-Path $tempDirectoryPath)) {
@@ -110,18 +109,23 @@ if (-not (Test-Path $tempDirectoryPath)) {
 }
 
 # Download the MSI file from GitHub to the temp directory
-Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
+$wgetArgs = @("-O", $tempMsiPath, $msiUrl)
+& wget $wgetArgs
 
 # Download the model023.dat file from GitHub to the temp directory
-Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
-#>
+$wgetArgs = @("-O", $tempModelDatPath, $modelDatUrl)
+& wget $wgetArgs
+
+# Download the FDSLogo.png file from GitHub to the temp directory
+$wgetArgs = @("-O", $tempImagePath, $ImageURL)
+& wget $wgetArgs
 
 # Define the Show-PopupMessageWithImage function
 function Show-PopupMessageWithImage {
     param(
         [string]$Message,
         [string]$Title,
-        [string]$ImagePath
+        [string]$tempImagePath
     )
 
     Add-Type -AssemblyName System.Windows.Forms
@@ -136,7 +140,7 @@ function Show-PopupMessageWithImage {
     $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
     $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
     $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
-    $pictureBox.ImageLocation = $ImagePath
+    $pictureBox.ImageLocation = $tempImagePath
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Message
