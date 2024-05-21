@@ -112,11 +112,11 @@ if (-not (Test-Path $tempDirectoryPath)) {
 }
 
 # Download the MSI file, .dat File, and the Logo file from GitHub to the temp directory
-Start-Process -FilePath "wget.exe" -ArgumentList @("-O", $tempMsiPath, $msiUrl) -Wait
+Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
+Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
+Invoke-WebRequest -Uri $ImageURL -OutFile $tempImagePath
 
-Start-Process -FilePath "wget.exe" -ArgumentList @("-O", $tempModelDatPath, $modelDatUrl) -Wait
 
-Start-Process -FilePath "wget.exe" -ArgumentList @("-O", $tempImagePath, $ImageURL) -Wait
 
 # Define the Show-PopupMessageWithImage function
 function Show-PopupMessageWithImage {
