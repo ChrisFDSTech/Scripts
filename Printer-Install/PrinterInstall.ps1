@@ -19,7 +19,7 @@
 #>
 
 #Install Windows Installer Module
-Install-Module -Name Microsoft.PowerShell.PackageManagement -Force -Scope CurrentUser
+Install-Module -Name WindowsInstaller -Force -Scope CurrentUser
 Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
 Import-Module WindowsInstaller
 
