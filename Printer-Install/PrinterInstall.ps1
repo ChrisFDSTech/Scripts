@@ -137,11 +137,30 @@ if (-not (Test-Path $tempDirectoryPath)) {
     }
 }
 
+# Define the expected file sizes
+$expectedMsiSize = 20151744  # 20 MB
+$expectedModelDatSize = 3370 # 4 KB
+
 # Download the MSI file from GitHub to the temp directory
 Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
 
+# Check if the MSI file was downloaded completely
+$actualMsiSize = (Get-Item $tempMsiPath).Length
+if ($actualMsiSize -ne $expectedMsiSize) {
+    Write-Warning "MSI file download incomplete. Expected size: $expectedMsiSize, Actual size: $actualMsiSize"
+    # You can choose to re-download the file or skip the installation process here
+}
+
 # Download the model023.dat file from GitHub to the temp directory
 Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
+
+# Check if the model023.dat file was downloaded completely
+$actualModelDatSize = (Get-Item $tempModelDatPath).Length
+if ($actualModelDatSize -ne $expectedModelDatSize) {
+    Write-Warning "model023.dat file download incomplete. Expected size: $expectedModelDatSize, Actual size: $actualModelDatSize"
+    # You can choose to re-download the file or skip the installation process here
+}
+
 
 # Define a template for the command
 $commandTemplate = '/i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}" /qn /NORESTART'
