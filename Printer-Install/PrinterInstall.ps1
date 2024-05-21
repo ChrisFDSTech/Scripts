@@ -71,7 +71,7 @@ $printerConfigs = @(
 )
 
 # Define the GitHub URL for the ZIP file
-$zipFileUrl = "https://github.com/ChrisFDSTech/Scripts/blob/main/Printer-Install/files.zip"
+$zipFileUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/PrinterInstall.ps1"
 
 # Define the directory and temp paths
 $directoryPath = "C:\ProgramData\FDS"
