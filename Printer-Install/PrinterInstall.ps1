@@ -18,22 +18,35 @@
     - Initial version of the script written.
 #>
 
-# Check if the WindowsInstaller module is available
-$windowsInstallerModule = Get-Module -ListAvailable -Name WindowsInstaller
+function Install-RequiredModule {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string[]]$ModuleNames
+    )
 
-# If the module is not available, try to install it
-if (-not $windowsInstallerModule) {
-    Write-Host "Installing WindowsInstaller module..."
-    try {
-        Install-Module -Name WindowsInstaller -Force -Scope CurrentUser > $null
-        Write-Host "Installing NuGet module..."
-        Install-PackageProvider -Name NuGet -Force -Scope CurrentUser > $null
+    $installedModules = @()
+
+    foreach ($moduleName in $ModuleNames) {
+        $module = Get-Module -ListAvailable -Name $moduleName
+        if (-not $module) {
+            Write-Host "Installing $moduleName module..."
+            try {
+                Install-Module -Name $moduleName -Force -Scope CurrentUser > $null
+                $installedModules += $moduleName
+            }
+            catch {
+                Write-Warning "Failed to install $moduleName module: $_"
+            }
+        }
     }
-    catch {
-        Write-Warning "Failed to install WindowsInstaller module: $_"
-        exit 1
+
+    if ($installedModules.Count -gt 0) {
+        Write-Host "Installed modules: $($installedModules -join ', ')"
     }
 }
+
+# Install required modules
+Install-RequiredModule -ModuleNames @('WindowsInstaller', 'NuGet')
 
 # Import the WindowsInstaller module
 Import-Module WindowsInstaller
