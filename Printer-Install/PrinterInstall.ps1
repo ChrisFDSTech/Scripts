@@ -79,7 +79,7 @@ $tempDirectoryPath = Join-Path $directoryPath "temp"
 $tempZipFilePath = Join-Path $tempDirectoryPath "files.zip"
 $tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
 $tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
-$tempImagePath = Join-Path $tempDirectoryPath "printer-icon.png"
+$tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
 
 # Download the ZIP file from GitHub to the temp directory
 Invoke-WebRequest -Uri $zipFileUrl -OutFile $tempZipFilePath
