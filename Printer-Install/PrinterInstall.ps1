@@ -27,6 +27,7 @@
     - Created a more appealing popup window
     - Fixed issue with exit code: 1619
     - Fixed popup window with ShowDiag
+    - removed WGET module
     
     
 #>
@@ -248,5 +249,5 @@ if (-not $matched) {
 }
 
 # Start a new PowerShell job to delete the temp directory after 15 minutes
-$job = Start-Job -ScriptBlock ${Function:Remove-TempDirectory} -ArgumentList $tempDirectoryPath, 15
+$job = Start-Job -ScriptBlock ${Function:Remove-TempDirectory} -ArgumentList $tempDirectoryPath, 10
 
