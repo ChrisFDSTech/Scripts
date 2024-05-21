@@ -205,34 +205,21 @@ foreach ($config in $printerConfigs) {
         $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
         $process.WaitForExit()
 
-if ($process.ExitCode -eq 0) {
-    try {
-        Add-Content -Path $printersFilePath -Value $config.Name -ErrorAction Stop
-        Write-Host "Printer name '$($config.Name)' added to $printersFilePath"
-
-        # Register the printer driver and create the registry key
-        $printerDriver = [System.Printing.PrinterSettings.PrinterDriver]::FromName($config.Name)
-        $printerDriver.RegisterPrinterDriver($tempModelDatPath)
-        $printerDriver.AddPrinterDriver($config.Name)
-
-        Write-Host "Printer driver for '$($config.Name)' registered and registry key created."
-    }
-    catch {
-        Write-Warning "Failed to write printer name to $printersFilePath or register printer driver: $_"
-    }
-} else {
-    $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
-    Write-Warning $errorMessage
-    Add-Content -Path $logFilePath -Value $errorMessage
-    Add-Content -Path $logFilePath -Value $process.StandardOutput
-    Add-Content -Path $logFilePath -Value $process.StandardError
-}
-
+        if ($process.ExitCode -ne 0) {
+            $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
+            Write-Warning $errorMessage
+            Add-Content -Path $logFilePath -Value $errorMessage
+            Add-Content -Path $logFilePath -Value $process.StandardOutput
+            Add-Content -Path $logFilePath -Value $process.StandardError
+        } else {
+            $message = "The $($config.Name) printer was installed."
+            Write-Host $message
+            Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
+        }
         $matched = $true
         break
     }
 }
-
 
 # If no matching IP address was found, show a popup message
 if (-not $matched) {
@@ -260,4 +247,5 @@ if (-not $matched) {
     $form.Controls.Add($label)
     $form.ShowDialog()
 }
+
 
