@@ -9,7 +9,7 @@
     Intune scripts are executed to install printers.
 
 .NOTES
-    Version:        10.0
+    Version:        3.0
     Author:         Chris Braeuer
     Creation Date:  5/17/2024
 
@@ -17,6 +17,9 @@
     Version 1.0 (5/17/2024):
     - Initial version of the script written.
     Version 2.0 (5/17/2024
+    - Fixed Issue with logo (Changed from .ico to .png)
+    - Changed the way the downloads were retrieved with WindowsInstallModule
+    
 #>
 
 $wgetPath = Get-Command wget -ErrorAction SilentlyContinue
@@ -108,17 +111,12 @@ if (-not (Test-Path $tempDirectoryPath)) {
     }
 }
 
-# Download the MSI file from GitHub to the temp directory
-$wgetArgs = @("-O", $tempMsiPath, $msiUrl)
-& wget $wgetArgs
+# Download the MSI file, .dat File, and the Logo file from GitHub to the temp directory
+Start-Process -FilePath "wget.exe" -ArgumentList @("-O", $tempMsiPath, $msiUrl) -Wait
 
-# Download the model023.dat file from GitHub to the temp directory
-$wgetArgs = @("-O", $tempModelDatPath, $modelDatUrl)
-& wget $wgetArgs
+Start-Process -FilePath "wget.exe" -ArgumentList @("-O", $tempModelDatPath, $modelDatUrl) -Wait
 
-# Download the FDSLogo.png file from GitHub to the temp directory
-$wgetArgs = @("-O", $tempImagePath, $ImageURL)
-& wget $wgetArgs
+Start-Process -FilePath "wget.exe" -ArgumentList @("-O", $tempImagePath, $ImageURL) -Wait
 
 # Define the Show-PopupMessageWithImage function
 function Show-PopupMessageWithImage {
