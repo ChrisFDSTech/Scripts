@@ -31,7 +31,7 @@
     
 #>
 
-$wgetPath = Get-Command wget -ErrorAction SilentlyContinue
+<# $wgetPath = Get-Command wget -ErrorAction SilentlyContinue
 
 if (-not $wgetPath) {
     Write-Host "wget is not installed. Installing wget using Chocolatey..."
@@ -44,7 +44,7 @@ if (-not $wgetPath) {
         exit 1
     }
 }
-
+#>
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
     @{ Name = 'Azalea Manor'; IPAddress = '192.168.14.200' },
