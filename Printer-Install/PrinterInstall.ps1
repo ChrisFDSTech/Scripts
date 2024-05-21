@@ -171,8 +171,7 @@ foreach ($config in $printerConfigs) {
 function Show-PopupMessageWithImage {
     param(
         [string]$Message,
-        [string]$Title,
-        [string]$ImagePath
+        [string]$Title
     )
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
@@ -194,11 +193,19 @@ function Show-PopupMessageWithImage {
     $label.Location = New-Object System.Drawing.Point(50, 150)
     $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 
+    $okButton = New-Object System.Windows.Forms.Button
+    $okButton.Text = "OK"
+    $okButton.Location = New-Object System.Drawing.Point(150, 220)
+    $okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+
     $form.Controls.Add($pictureBox)
     $form.Controls.Add($label)
+    $form.Controls.Add($okButton)
+    $form.AcceptButton = $okButton
 
-    $form.ShowDialog()
+    $form.ShowDialog() | Out-Null
 }
+
 
 # If a matching IP address was found and printer installed, show a popup message with the printer name
 if ($matched) {
