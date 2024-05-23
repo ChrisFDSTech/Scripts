@@ -271,7 +271,6 @@ if ($printerDriver) {
 # Create a scheduled task to delete the specified files after 5 minutes
 $action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath' -Force`""
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
-$settings = New-ScheduledTaskSettingSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-$task = Register-ScheduledTask -Action $action -Trigger $trigger -Settings $settings -Principal $principal -TaskName "DeleteTempFiles" -Description "Delete temporary files after 5 minutes"
+$task = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "DeleteTempFiles" -Description "Delete temporary files after 5 minutes"
 
