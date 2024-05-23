@@ -232,6 +232,10 @@ catch {
                 $message = "The $($config.Name) printer was installed."
                 Write-Host $message
                 Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
+
+                # Create a text file with the printer name
+                $printerNameFile = Join-Path $tempDirectoryPath "$($config.Name).txt"
+                Set-Content -Path $printerNameFile -Value $config.Name
             }
             $matched = $true
             break
