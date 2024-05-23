@@ -106,6 +106,7 @@ $printerConfigs = @(
 # Define the GitHub URLs for the files
 $msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
 $modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
+$ImageURL = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/FDSLogo.png"
 
 # Define the directory and temp paths
 $directoryPath = "C:\ProgramData\FDS"
@@ -113,6 +114,7 @@ $tempDirectoryPath = Join-Path $directoryPath "PrinterInstall"
 $tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
 $tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
 $printerInstalledLogPath = Join-Path $tempDirectoryPath "PrintersInstalled.txt"
+$printerUninstallLogPath = Join-Path $tempDirectoryPath "PrinterUninstall.txt"
 
 # Ensure the temp directory exists
 if (-not (Test-Path $directoryPath)) {
@@ -185,14 +187,8 @@ catch {
                 $message = "The $($config.Name) printer was installed."
                 Write-Host $message
 
-                # Update the PrintersInstalled.txt file
-                if (Test-Path $printerInstalledLogPath) {
-                    $existingContent = Get-Content $printerInstalledLogPath
-                    Set-Content -Path $printerInstalledLogPath -Value ($config.Name, $existingContent)
-                } else {
-                    Set-Content -Path $printerInstalledLogPath -Value $config.Name
-                }
-
+                # Update the PrintersInstalled.txt and PrinterUninstall.txt files
+                UpdatePrinterLogFiles $config.Name
             }
             $matched = $true
             break
@@ -236,21 +232,35 @@ if ($printerDriver) {
             $message = "The $($config.Name) printer was installed."
             Write-Host $message
 
-            # Create a text file with the printer name
-            $printerNameFile = Join-Path $tempDirectoryPath "$($config.Name).txt"
-            Set-Content -Path $printerNameFile -Value $config.Name
+            # Update the PrintersInstalled.txt and PrinterUninstall.txt files
+            UpdatePrinterLogFiles $config.Name
 
             $matched = $true
             break
         }
     }
 
-            # Update the PrintersInstalled.txt file
-             if (Test-Path $printerInstalledLogPath) {
-                 $existingContent = Get-Content $printerInstalledLogPath
-                 Set-Content -Path $printerInstalledLogPath -Value ($config.Name, $existingContent)
-               }else {
-                 Set-Content -Path $printerInstalledLogPath -Value $config.Name
-               }
+    # If no matching IP address was found, log the error
+    if (-not $matched) {
+        $errorMessage = "No matching IP address found for printer installation."
+        Write-Warning $errorMessage
+        Add-Content -Path $logFilePath -Value $errorMessage
+    }
 }
 
+# Function to update the PrintersInstalled.txt and PrinterUninstall.txt files
+function UpdatePrinterLogFiles($printerName) {
+    if (Test-Path $printerInstalledLogPath) {
+        $existingContent = Get-Content $printerInstalledLogPath
+        Set-Content -Path $printerInstalledLogPath -Value ($printerName, $existingContent)
+    } else {
+        Set-Content -Path $printerInstalledLogPath -Value $printerName
+    }
+
+    if (Test-Path $printerUninstallLogPath) {
+        $existingContent = Get-Content $printerUninstallLogPath
+        Set-Content -Path $printerUninstallLogPath -Value ($printerName, $existingContent)
+    } else {
+        Set-Content -Path $printerUninstallLogPath -Value $printerName
+    }
+}
