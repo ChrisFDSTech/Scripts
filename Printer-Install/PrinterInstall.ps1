@@ -266,21 +266,64 @@ catch {
     }
 }
 
-# If the driver is already installed, proceed with the rest of the new script logic
+# If the driver is already installed, proceed with adding the printer
 if ($printerDriver) {
-    # Check if the printer port already exists
-    $portName = "IP_$($config.IPAddress)"
-    $existingPort = Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue
+    # Get the current IP address of the machine
+    $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
 
-    if (-not $existingPort) {
-        # Add the printer port
-        Add-PrinterPort -Name $portName -PrinterHostAddress "$($config.IPAddress)"
+    # Truncate the current IP address to the first three octets
+    $TruncatedCurrentIPAddress = $CurrentIPAddress -replace '\.\d+$'
+
+    # Iterate through the array to find a matching IP address and add the printer
+    $matched = $false
+    foreach ($config in $printerConfigs) {
+        # Truncate the IP address from the configurations to the first three octets
+        $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
+        if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
+            # Check if the printer port already exists
+            $portName = "IP_$($config.IPAddress)"
+            $existingPort = Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue
+
+            if (-not $existingPort) {
+                # Add the printer port
+                Add-PrinterPort -Name $portName -PrinterHostAddress "$($config.IPAddress)"
+            }
+
+            # Add the printer
+            Add-Printer -Name $config.Name -DriverName "Brother MFC-L6900DW series" -PortName $portName
+
+            $message = "The $($config.Name) printer was installed."
+            Write-Host $message
+            Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
+            $matched = $true
+            break
+        }
     }
 
-    # Add the printer
-    Add-Printer -Name $config.Name -DriverName "Brother MFC-L6900DW series" -PortName $portName
+    # If no matching IP address was found, show a popup message
+    if (-not $matched) {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
 
-    $message = "The $($config.Name) printer was installed."
-    Write-Host $message
-    Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
+        $form = New-Object System.Windows.Forms.Form
+        $form.Text = "Printer Setup Issue"
+        $form.Size = New-Object System.Drawing.Size(400, 300)
+        $form.StartPosition = "CenterScreen"
+
+        $pictureBox = New-Object System.Windows.Forms.PictureBox
+        $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
+        $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
+        $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
+        $pictureBox.ImageLocation = $tempImagePath
+
+        $label = New-Object System.Windows.Forms.Label
+        $label.Text = "There was an issue with installing the printer, please call support at 910-483-5395"
+        $label.AutoSize = $true
+        $label.Location = New-Object System.Drawing.Point(50, 150)
+        $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+
+        $form.Controls.Add($pictureBox)
+        $form.Controls.Add($label)
+        $form.ShowDialog()
+    }
 }
