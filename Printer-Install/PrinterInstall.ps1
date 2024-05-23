@@ -51,6 +51,9 @@
 
 #>
 
+# Import the ScheduledTasks module
+Import-Module ScheduledTasks
+
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
     @{ Name = 'Azalea Manor'; IPAddress = '192.168.14.200' },
