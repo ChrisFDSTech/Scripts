@@ -110,7 +110,7 @@ $ImageURL = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer
 
 # Define the directory and temp paths
 $directoryPath = "C:\ProgramData\FDS"
-$tempDirectoryPath = Join-Path $directoryPath "temp"
+$tempDirectoryPath = Join-Path $directoryPath "PrinterInstall"
 $tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
 $tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
 $tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
