@@ -9,7 +9,7 @@
     Intune scripts are executed to install printers.
 
 .NOTES
-    Version:        3.0
+    Version:        5.0
     Author:         Chris Braeuer
     Creation Date:  5/17/2024
 
@@ -33,29 +33,22 @@
     - Added check for printer driver installation
     - If driver is installed, use the existing driver instead of attempting to install it again
     - Removed code to download MSI and DAT files
-
-    Version 4.1 (5/22/2024)
     - Added logic to download and install the printer driver if it's not already installed
-
-    Version 4.2 (5/22/2024)
     - Updated script to use Add-PrinterDriver and Add-Printer cmdlets instead of rundll32.exe
-
-    Version 4.3 (5/22/2024)
     - Fixed issues with downloading the DAT file and adding the printer port
-
-    Version 4.4 (5/22/2024)
     - Added logic to download and install the printer driver files (MSI and DAT) if the driver is not already installed
-
-    Version 4.5 (5/22/2024)
     - Updated script to use pnputil.exe to install the printer driver
-
-    Version 4.6 (5/22/2024)
     - Added a check to skip adding the printer port if it already exists
-
-    Version 4.7 (5/22/2024)
     - Capture and display the error output from pnputil.exe when installing the printer driver
-
+    - Capture and display the error output from pnputil.exe when installing the printer driver
     
+    Version 5.0 (5/25/2024)
+    - Improved the logic for installing the printer driver and printer
+    - If the printer driver is not installed, the script now uses the same logic as the previous version to install the driver and printer using the `msiexec` command
+    - If the printer driver is already installed, the script proceeds with the new logic to check for the printer port, add the printer port if it doesn't exist, and then add the printer
+    - Added better error handling and logging for failed printer installations
+    - Retained the existing functionality to display a popup message with the FDS logo upon successful printer installation or if there's an issue with the installation
+
 #>
 
 # Define an array of hashtables with the printer configurations
@@ -107,7 +100,7 @@ $printerConfigs = @(
     @{ Name = 'West Fayetteville'; IPAddress = '192.168.204.200' },
     @{ Name = 'Woodgreen'; IPAddress = '192.168.64.200' },
     @{ Name = 'Zebulon Green'; IPAddress = '192.168.103.200' },
-    @{ Name = 'Intune Printer'; IPAddress = '172.30.125.200' }
+    @{ Name = 'Company Printer'; IPAddress = '172.30.125.202' }
 )
 
 # Define the GitHub URLs for the files
@@ -205,88 +198,89 @@ try {
     }
 }
 catch {
-    Write-Warning "The printer driver '$driverName' is not installed. Installing the driver..."
+    Write-Warning "The printer driver '$driverName' is not installed. Installing the driver and printer..."
 
-    # Install the printer driver
-    $arguments = "/i `"$tempMsiPath`" /qn DRIVERNAME=`"Brother MFC-L6900DW series`" DRIVERPATH=`"$tempModelDatPath`""
-    Write-Host "Executing command: msiexec $arguments"
-    $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
-    $process.WaitForExit()
+    # Define a template for the command (same as the old script)
+    $commandTemplate = '/i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}" /qn /NORESTART'
 
-    if ($process.ExitCode -ne 0) {
-        $errorMessage = "Failed to install printer driver '$driverName'. Exit code: $($process.ExitCode)"
-        Write-Warning $errorMessage
-        Show-PopupMessageWithImage $errorMessage "Printer Driver Installation Failed" $tempImagePath
-        return
-    }
+    # Get the current IP address of the machine
+    $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
 
-    Write-Host "The printer driver '$driverName' has been installed successfully."
-}
+    # Truncate the current IP address to the first three octets
+    $TruncatedCurrentIPAddress = $CurrentIPAddress -replace '\.\d+$'
 
-# Get the current IP address of the machine
-$CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
+    # Iterate through the array to find a matching IP address and execute the command
+    $matched = $false
+    foreach ($config in $printerConfigs) {
+        # Truncate the IP address from the configurations to the first three octets
+        $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
+        if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
+            $logFilePath = Join-Path $tempDirectoryPath "printer-install.log"
 
-# Truncate the current IP address to the first three octets
-$TruncatedCurrentIPAddress = $CurrentIPAddress -replace '\.\d+$'
+            $arguments = $commandTemplate -f $tempMsiPath, $config.Name, $config.IPAddress
+            Write-Host "Executing command: msiexec $arguments"
+            $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
+            $process.WaitForExit()
 
-# Iterate through the array to find a matching IP address and execute the command
-$matched = $false
-foreach ($config in $printerConfigs) {
-    # Truncate the IP address from the configurations to the first three octets
-    $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
-    if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
-        # Check if the printer driver is installed
-        if ($printerDriver) {
-            # Check if the printer port already exists
-            $portName = "IP_$($config.IPAddress)"
-            $existingPort = Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue
-
-            if (-not $existingPort) {
-                # Add the printer port
-                Add-PrinterPort -Name $portName -PrinterHostAddress "$($config.IPAddress)"
+            if ($process.ExitCode -ne 0) {
+                $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
+                Write-Warning $errorMessage
+                Add-Content -Path $logFilePath -Value $errorMessage
+                Add-Content -Path $logFilePath -Value $process.StandardOutput
+                Add-Content -Path $logFilePath -Value $process.StandardError
+            } else {
+                $message = "The $($config.Name) printer was installed."
+                Write-Host $message
+                Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
             }
-
-            # Add the printer
-            Add-Printer -Name $config.Name -DriverName "Brother MFC-L6900DW series" -PortName $portName
-
-            $message = "The $($config.Name) printer was installed."
-            Write-Host $message
-            Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
+            $matched = $true
+            break
         }
-        else {
-            # Driver installation logic if the driver is not installed
-            # ...
-        }
-        $matched = $true
-        break
+    }
+
+    # If no matching IP address was found, show a popup message
+    if (-not $matched) {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+
+        $form = New-Object System.Windows.Forms.Form
+        $form.Text = "Printer Setup Issue"
+        $form.Size = New-Object System.Drawing.Size(400, 300)
+        $form.StartPosition = "CenterScreen"
+
+        $pictureBox = New-Object System.Windows.Forms.PictureBox
+        $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
+        $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
+        $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
+        $pictureBox.ImageLocation = $tempImagePath
+
+        $label = New-Object System.Windows.Forms.Label
+        $label.Text = "There was an issue with installing the printer, please call support at 910-483-5395"
+        $label.AutoSize = $true
+        $label.Location = New-Object System.Drawing.Point(50, 150)
+        $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+
+        $form.Controls.Add($pictureBox)
+        $form.Controls.Add($label)
+        $form.ShowDialog()
     }
 }
 
-# If no matching IP address was found, show a popup message
-if (-not $matched) {
-    Add-Type -AssemblyName System.Windows.Forms
-    Add-Type -AssemblyName System.Drawing
+# If the driver is already installed, proceed with the rest of the new script logic
+if ($printerDriver) {
+    # Check if the printer port already exists
+    $portName = "IP_$($config.IPAddress)"
+    $existingPort = Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue
 
-    $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Printer Setup Issue"
-    $form.Size = New-Object System.Drawing.Size(400, 300)
-    $form.StartPosition = "CenterScreen"
+    if (-not $existingPort) {
+        # Add the printer port
+        Add-PrinterPort -Name $portName -PrinterHostAddress "$($config.IPAddress)"
+    }
 
-    $pictureBox = New-Object System.Windows.Forms.PictureBox
-    $pictureBox.Size = New-Object System.Drawing.Size(100, 100)
-    $pictureBox.Location = New-Object System.Drawing.Point(150, 20)
-    $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
-    $pictureBox.ImageLocation = $tempImagePath
+    # Add the printer
+    Add-Printer -Name $config.Name -DriverName "Brother MFC-L6900DW series" -PortName $portName
 
-    $label = New-Object System.Windows.Forms.Label
-    $label.Text = "There was an issue with installing the printer, please call support at 910-483-5395"
-    $label.AutoSize = $true
-    $label.Location = New-Object System.Drawing.Point(50, 150)
-    $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-
-    $form.Controls.Add($pictureBox)
-    $form.Controls.Add($label)
-    $form.ShowDialog()
+    $message = "The $($config.Name) printer was installed."
+    Write-Host $message
+    Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
 }
-
-
