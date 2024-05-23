@@ -103,6 +103,23 @@ $printerConfigs = @(
     @{ Name = 'Company Printer'; IPAddress = '172.30.125.202' }
 )
 
+# Function to update the PrintersInstalled.txt and PrinterUninstall.txt files
+function UpdatePrinterLogFiles($printerName) {
+    if (Test-Path $printerInstalledLogPath) {
+        $existingContent = Get-Content $printerInstalledLogPath
+        Set-Content -Path $printerInstalledLogPath -Value ($printerName, $existingContent)
+    } else {
+        Set-Content -Path $printerInstalledLogPath -Value $printerName
+    }
+
+    if (Test-Path $printerUninstallLogPath) {
+        $existingContent = Get-Content $printerUninstallLogPath
+        Set-Content -Path $printerUninstallLogPath -Value ($printerName, $existingContent)
+    } else {
+        Set-Content -Path $printerUninstallLogPath -Value $printerName
+    }
+}
+
 # Define the GitHub URLs for the files
 $msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
 $modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
@@ -245,23 +262,6 @@ if ($printerDriver) {
         $errorMessage = "No matching IP address found for printer installation."
         Write-Warning $errorMessage
         Add-Content -Path $logFilePath -Value $errorMessage
-    }
-}
-
-# Function to update the PrintersInstalled.txt and PrinterUninstall.txt files
-function UpdatePrinterLogFiles($printerName) {
-    if (Test-Path $printerInstalledLogPath) {
-        $existingContent = Get-Content $printerInstalledLogPath
-        Set-Content -Path $printerInstalledLogPath -Value ($printerName, $existingContent)
-    } else {
-        Set-Content -Path $printerInstalledLogPath -Value $printerName
-    }
-
-    if (Test-Path $printerUninstallLogPath) {
-        $existingContent = Get-Content $printerUninstallLogPath
-        Set-Content -Path $printerUninstallLogPath -Value ($printerName, $existingContent)
-    } else {
-        Set-Content -Path $printerUninstallLogPath -Value $printerName
     }
 }
 
