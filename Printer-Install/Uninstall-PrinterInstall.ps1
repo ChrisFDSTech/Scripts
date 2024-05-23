@@ -1,74 +1,60 @@
-# Define the list of printer names to check for
-$printerNames = @(
-    'Azalea Manor',
-    'Bennettsville Green',
-    'Benson Green',
-    'Blanton Green',
-    'Bordeaux',
-    'Bunce Green',
-    'Bunce Manor',
-    'Cleveland Green III',
-    'Clinton Green',
-    'Club Pond',
-    'Coldwater Ridge',
-    'Cross Creek Pointe',
-    'Crosswinds Green',
-    'Cypress Manor',
-    'Dogwood Manor',
-    'Eastside Green',
-    'Golfview',
-    'Graham Manor',
-    'Haymount Manor',
-    'Hickory Ridge',
-    'Hoke Loop',
-    'Legion Crossing',
-    'Legion Manor',
-    'Longview',
-    'McArthur Park',
-    'Millstone Landing',
-    'Newberry Green',
-    'Oak Run',
-    'Oak Run II',
-    'Palmer Green',
-    'Raeford Green',
-    'Reidsville Ridge',
-    'Riverview Green',
-    'Rosehill West',
-    'Shallotte Villas',
-    'Southview Green',
-    'Southview Townhouses',
-    'Southview Villas',
-    'Spring Lake Green',
-    'Sycamore Park',
-    'Tokay Green',
-    'Wallstreet Green',
-    'Watauga Green',
-    'West Cumberland',
-    'West Fayetteville',
-    'Woodgreen',
-    'Zebulon Green',
-    'Intune Printer'
-)
+# Define the path to the text file
+$textFilePath = "C:\ProgramData\FDS\PrinterInstall\PrinterUninstall.txt"
 
-# Get a list of all installed printers
-$installedPrinters = Get-Printer -Full
+# Check if the file exists
+if (Test-Path $textFilePath -PathType Leaf) {
+    # Read the content of the text file
+    $printerNames = Get-Content -Path $textFilePath
 
-# Loop through each printer name in the list
-foreach ($printerName in $printerNames) {
-    # Check if the printer is installed
-    $printer = $installedPrinters | Where-Object { $_.Name -eq $printerName }
+    if ($printerNames) {
+        $printersUninstalled = @()
+        $printersNotFound = @()
 
-    if ($printer) {
-        try {
-            # Uninstall the printer
-            $null = $printer.RemovePrinter()
-            Write-Host "Printer '$printerName' has been uninstalled."
+        foreach ($printerName in $printerNames) {
+            # Trim any leading or trailing whitespace
+            $printerName = $printerName.Trim()
+
+            if ($printerName) {
+                # Check if the printer is installed
+                $installedPrinter = Get-Printer | Where-Object { $_.Name -eq $printerName }
+
+                if ($installedPrinter) {
+                    try {
+                        # Remove the printer
+                        Remove-Printer -Name $printerName
+                        $printersUninstalled += $printerName
+                        Write-Output "Printer '$printerName' uninstalled successfully."
+                    } catch {
+                        Write-Output "Failed to uninstall printer '$printerName'. Error: $_"
+                    }
+                } else {
+                    $printersNotFound += $printerName
+                    Write-Output "Printer '$printerName' not found."
+                }
+            }
         }
-        catch {
-            Write-Warning "Failed to uninstall printer '$printerName': $_"
+
+        if ($printersUninstalled) {
+            Write-Output "The following printers were uninstalled: $($printersUninstalled -join ', ')"
         }
+
+        if ($printersNotFound) {
+            Write-Output "The following printers were not found: $($printersNotFound -join ', ')"
+        }
+
+        # Return a success exit code (0) if at least one printer was uninstalled, otherwise a failure exit code (1)
+        if ($printersUninstalled.Count -gt 0) {
+            exit 0
+        } else {
+            exit 1
+        }
+    } else {
+        Write-Output "The file '$textFilePath' is empty or could not read the printer names."
+        # Return a failure exit code (1)
+        exit 1
     }
-    else {
-        Write-Host "Printer '$printerName' is not installed."
-    }
+} else {
+    Write-Output "File '$textFilePath' not found."
+    # Return a failure exit code (1)
+    exit 1
 }
