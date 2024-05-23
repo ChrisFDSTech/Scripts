@@ -114,6 +114,7 @@ $tempDirectoryPath = Join-Path $directoryPath "PrinterInstall"
 $tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
 $tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
 $tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
+$printerInstalledLogPath = Join-Path $tempDirectoryPath "PrintersInstalled.txt"
 
 # Ensure the temp directory exists
 if (-not (Test-Path $directoryPath)) {
@@ -187,9 +188,14 @@ catch {
                 $message = "The $($config.Name) printer was installed."
                 Write-Host $message
 
-                # Create a text file with the printer name
-                $printerNameFile = Join-Path $tempDirectoryPath "$($config.Name).txt"
-                Set-Content -Path $printerNameFile -Value $config.Name
+                # Update the PrintersInstalled.txt file
+                if (Test-Path $printerInstalledLogPath) {
+                    $existingContent = Get-Content $printerInstalledLogPath
+                    Set-Content -Path $printerInstalledLogPath -Value ($config.Name, $existingContent)
+                } else {
+                    Set-Content -Path $printerInstalledLogPath -Value $config.Name
+                }
+
             }
             $matched = $true
             break
@@ -242,11 +248,12 @@ if ($printerDriver) {
         }
     }
 
-    # If no matching IP address was found, log the error
-    if (-not $matched) {
-        $errorMessage = "No matching IP address found for printer installation."
-        Write-Warning $errorMessage
-        Add-Content -Path $logFilePath -Value $errorMessage
-    }
+            # Update the PrintersInstalled.txt file
+             if (Test-Path $printerInstalledLogPath) {
+                 $existingContent = Get-Content $printerInstalledLogPath
+                 Set-Content -Path $printerInstalledLogPath -Value ($config.Name, $existingContent)
+               }else {
+                 Set-Content -Path $printerInstalledLogPath -Value $config.Name
+               }
 }
 
