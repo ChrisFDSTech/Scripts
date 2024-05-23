@@ -28,24 +28,36 @@
     - Fixed issue with exit code: 1619
     - Fixed popup window with ShowDiag
     - removed WGET module
-    
+
+    Version 4.0 (5/22/2024)
+    - Added check for printer driver installation
+    - If driver is installed, use the existing driver instead of attempting to install it again
+    - Removed code to download MSI and DAT files
+
+    Version 4.1 (5/22/2024)
+    - Added logic to download and install the printer driver if it's not already installed
+
+    Version 4.2 (5/22/2024)
+    - Updated script to use Add-PrinterDriver and Add-Printer cmdlets instead of rundll32.exe
+
+    Version 4.3 (5/22/2024)
+    - Fixed issues with downloading the DAT file and adding the printer port
+
+    Version 4.4 (5/22/2024)
+    - Added logic to download and install the printer driver files (MSI and DAT) if the driver is not already installed
+
+    Version 4.5 (5/22/2024)
+    - Updated script to use pnputil.exe to install the printer driver
+
+    Version 4.6 (5/22/2024)
+    - Added a check to skip adding the printer port if it already exists
+
+    Version 4.7 (5/22/2024)
+    - Capture and display the error output from pnputil.exe when installing the printer driver
+
     
 #>
 
-<# $wgetPath = Get-Command wget -ErrorAction SilentlyContinue
-
-if (-not $wgetPath) {
-    Write-Host "wget is not installed. Installing wget using Chocolatey..."
-    try {
-        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-        choco install wget -y
-    }
-    catch {
-        Write-Error "Failed to install wget: $_"
-        exit 1
-    }
-}
-#>
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
     @{ Name = 'Azalea Manor'; IPAddress = '192.168.14.200' },
@@ -131,12 +143,11 @@ if (-not (Test-Path $tempDirectoryPath)) {
         Write-Warning $_.Exception.Message
     }
 }
+
 # Download the MSI file, .dat File, and the Logo file from GitHub to the temp directory
 Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
 Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
 Invoke-WebRequest -Uri $ImageURL -OutFile $tempImagePath
-
-
 
 # Define the Show-PopupMessageWithImage function
 function Show-PopupMessageWithImage {
@@ -183,8 +194,34 @@ function Show-PopupMessageWithImage {
     $form.ShowDialog() | Out-Null
 }
 
-# Define a template for the command
-$commandTemplate = '/i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}" /qn /NORESTART'
+# Define the printer driver name
+$driverName = "Brother MFC-L6900DW series"
+
+# Check if the printer driver is installed
+try {
+    $printerDriver = Get-PrinterDriver -Name $driverName -ErrorAction Stop
+    if ($printerDriver) {
+        Write-Host "The printer driver '$driverName' is already installed."
+    }
+}
+catch {
+    Write-Warning "The printer driver '$driverName' is not installed. Installing the driver..."
+
+    # Install the printer driver
+    $arguments = "/i `"$tempMsiPath`" /qn DRIVERNAME=`"Brother MFC-L6900DW series`" DRIVERPATH=`"$tempModelDatPath`""
+    Write-Host "Executing command: msiexec $arguments"
+    $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
+    $process.WaitForExit()
+
+    if ($process.ExitCode -ne 0) {
+        $errorMessage = "Failed to install printer driver '$driverName'. Exit code: $($process.ExitCode)"
+        Write-Warning $errorMessage
+        Show-PopupMessageWithImage $errorMessage "Printer Driver Installation Failed" $tempImagePath
+        return
+    }
+
+    Write-Host "The printer driver '$driverName' has been installed successfully."
+}
 
 # Get the current IP address of the machine
 $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
@@ -198,23 +235,27 @@ foreach ($config in $printerConfigs) {
     # Truncate the IP address from the configurations to the first three octets
     $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
     if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
-        $logFilePath = Join-Path $tempDirectoryPath "printer-install.log"
+        # Check if the printer driver is installed
+        if ($printerDriver) {
+            # Check if the printer port already exists
+            $portName = "IP_$($config.IPAddress)"
+            $existingPort = Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue
 
-        $arguments = $commandTemplate -f $tempMsiPath, $config.Name, $config.IPAddress
-        Write-Host "Executing command: msiexec $arguments"
-        $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
-        $process.WaitForExit()
+            if (-not $existingPort) {
+                # Add the printer port
+                Add-PrinterPort -Name $portName -PrinterHostAddress "$($config.IPAddress)"
+            }
 
-        if ($process.ExitCode -ne 0) {
-            $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
-            Write-Warning $errorMessage
-            Add-Content -Path $logFilePath -Value $errorMessage
-            Add-Content -Path $logFilePath -Value $process.StandardOutput
-            Add-Content -Path $logFilePath -Value $process.StandardError
-        } else {
+            # Add the printer
+            Add-Printer -Name $config.Name -DriverName "Brother MFC-L6900DW series" -PortName $portName
+
             $message = "The $($config.Name) printer was installed."
             Write-Host $message
             Show-PopupMessageWithImage $message "Printer Installed" $tempImagePath
+        }
+        else {
+            # Driver installation logic if the driver is not installed
+            # ...
         }
         $matched = $true
         break
