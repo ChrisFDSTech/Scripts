@@ -106,14 +106,12 @@ $printerConfigs = @(
 # Define the GitHub URLs for the files
 $msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
 $modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
-$ImageURL = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/FDSLogo.png"
 
 # Define the directory and temp paths
 $directoryPath = "C:\ProgramData\FDS"
 $tempDirectoryPath = Join-Path $directoryPath "PrinterInstall"
 $tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
 $tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
-$tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
 $printerInstalledLogPath = Join-Path $tempDirectoryPath "PrintersInstalled.txt"
 
 # Ensure the temp directory exists
@@ -141,7 +139,6 @@ if (-not (Test-Path $tempDirectoryPath)) {
 # Download the MSI file, .dat File, and the Logo file from GitHub to the temp directory
 Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
 Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
-Invoke-WebRequest -Uri $ImageURL -OutFile $tempImagePath
 
 # Define the printer driver name
 $driverName = "Brother MFC-L6900DW series"
