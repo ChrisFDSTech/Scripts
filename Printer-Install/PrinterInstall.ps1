@@ -103,13 +103,6 @@ $printerConfigs = @(
     @{ Name = 'Company Printer'; IPAddress = '172.30.125.202' }
 )
 
-# Define an array of hashtables with the printer configurations
-$printerConfigs = @(
-    @{ Name = 'Azalea Manor'; IPAddress = '192.168.14.200' },
-    @{ Name = 'Bennettsville Green'; IPAddress = '192.168.5.200' },
-    # ... (rest of the configurations)
-)
-
 # Define the GitHub URLs for the files
 $msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
 $modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
@@ -117,7 +110,7 @@ $ImageURL = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer
 
 # Define the directory and temp paths
 $directoryPath = "C:\ProgramData\FDS"
-$tempDirectoryPath = Join-Path $directoryPath "temp"
+$tempDirectoryPath = Join-Path $directoryPath "PrinterInstall"
 $tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
 $tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
 $tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
