@@ -51,29 +51,22 @@
 
 #>
 
-try {
-    # Install the NuGet provider if it's not already installed
-    $nugetProvider = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
-    if (-not $nugetProvider) {
-        Write-Host "Installing NuGet provider..."
-        $providerBootstrapperCode = {
-            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-            $bootstrapperPackage = Install-PackageProvider -Name NuGet -Force -RequiredVersion 2.8.5.208
-        }
-        $job = Start-Job -ScriptBlock $providerBootstrapperCode -ErrorAction Stop
-        $job | Wait-Job | Receive-Job -ErrorAction Stop
-    }
-
-    # Check if the BurntToastNotification module is installed, and install it if not
-    $module = Get-Module -ListAvailable -Name BurntToastNotification
-    if (-not $module) {
-        Write-Host "Installing BurntToastNotification module..."
-        Install-Module -Name BurntToastNotification -Force -Scope CurrentUser
-    }
-
-    # Import the BurntToastNotification module
-    Import-Module BurntToastNotification
+# Install the NuGet provider if it's not already installed
+$nugetProvider = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
+if (-not $nugetProvider) {
+    Write-Host "Installing NuGet provider..."
+    Install-PackageProvider -Name NuGet -Force
 }
+
+# Check if the BurntToastNotification module is installed, and install it if not
+$module = Get-Module -ListAvailable -Name BurntToastNotification
+if (-not $module) {
+    Write-Host "Installing BurntToastNotification module..."
+    Install-Module -Name BurntToastNotification -Force -Scope CurrentUser
+}
+
+# Import the BurntToastNotification module
+Import-Module BurntToastNotification
 
 # Import the ScheduledTasks module
 Import-Module ScheduledTasks
