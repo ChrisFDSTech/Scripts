@@ -51,8 +51,33 @@
 
 #>
 
+try {
+    # Install the NuGet provider if it's not already installed
+    $nugetProvider = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
+    if (-not $nugetProvider) {
+        Write-Host "Installing NuGet provider..."
+        $providerBootstrapperCode = {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            $bootstrapperPackage = Install-PackageProvider -Name NuGet -Force -RequiredVersion 2.8.5.208
+        }
+        $job = Start-Job -ScriptBlock $providerBootstrapperCode -ErrorAction Stop
+        $job | Wait-Job | Receive-Job -ErrorAction Stop
+    }
+
+    # Check if the BurntToastNotification module is installed, and install it if not
+    $module = Get-Module -ListAvailable -Name BurntToastNotification
+    if (-not $module) {
+        Write-Host "Installing BurntToastNotification module..."
+        Install-Module -Name BurntToastNotification -Force -Scope CurrentUser
+    }
+
+    # Import the BurntToastNotification module
+    Import-Module BurntToastNotification
+}
+
 # Import the ScheduledTasks module
 Import-Module ScheduledTasks
+
 
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
@@ -106,6 +131,16 @@ $printerConfigs = @(
     @{ Name = 'Company Printer'; IPAddress = '172.30.125.202' }
 )
 
+# Function to let the user know the printer was installed
+function Show-ToastNotification($printerName) {
+    $logoPath = Join-Path $tempDirectoryPath "FDSLogo.png"
+    $toastConfig = New-BTNotification -AppId "FDSPrinterInstaller" -Title "Printer Installed" -Content "$printerName has been installed." -ImagePath $logoPath
+    $toastConfig.RemoveFromHistory = $true
+    $toastConfig.Silent = $true
+    $toast = New-BTNotification -Config $toastConfig
+    $toast.Show()
+}
+
 # Function to update the PrintersInstalled.txt and PrinterUninstall.txt files
 function UpdatePrinterLogFiles($printerName) {
     if (Test-Path $printerInstalledLogPath) {
@@ -126,7 +161,7 @@ function UpdatePrinterLogFiles($printerName) {
 # Define the GitHub URLs for the files
 $msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
 $modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
-$imageURL = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/FDSLogo.png"
+$ImageURL = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/FDSLogo.png"
 
 # Define the directory and temp paths
 $directoryPath = "C:\ProgramData\FDS"
@@ -211,6 +246,10 @@ catch {
 
                 # Update the PrintersInstalled.txt and PrinterUninstall.txt files
                 UpdatePrinterLogFiles $config.Name
+		
+		# Show the toast notification
+		Show-ToastNotification -printerName $config.Name
+
             }
             $matched = $true
             break
@@ -257,6 +296,9 @@ if ($printerDriver) {
             # Update the PrintersInstalled.txt and PrinterUninstall.txt files
             UpdatePrinterLogFiles $config.Name
 
+	    # Show the toast notification
+	    Show-ToastNotification -printerName $config.Name
+
             $matched = $true
             break
         }
@@ -284,3 +326,4 @@ $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $task = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "DeleteTempFiles" -Description "Delete temporary files after 5 minutes"
 
+Write-Host "Scheduled task 'DeleteTempFiles' created. It will run in 5 minutes."
