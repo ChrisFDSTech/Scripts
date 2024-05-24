@@ -51,25 +51,47 @@
 
 #>
 
-# Install the NuGet provider if it's not already installed
-$nugetProvider = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
-if (-not $nugetProvider) {
-    Write-Host "Installing NuGet provider..."
-    Install-PackageProvider -Name NuGet -Force
+If ($PSVersionTable.PSVersion -ge [version]"5.0" -and (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\').Release -ge 379893) {
+
+    If ([Net.ServicePointManager]::SecurityProtocol -ne [Net.SecurityProtocolType]::SystemDefault) {
+         Try { [Net.ServicePointManager]::SecurityProtocol = @([Net.SecurityProtocolType]::Tls,[Net.SecurityProtocolType]::Tls11,[Net.SecurityProtocolType]::Tls12)}
+         Catch { Exit }
+    }
+
+    If ((Get-PackageProvider).Name -notcontains "NuGet") {
+        Try { Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -ErrorAction Stop }
+        Catch { Exit }
+    }
+    $ArrPSRepos = Get-PSRepository
+    If ($ArrPSRepos.Name -notcontains "PSGallery") {
+        Try { Register-PSRepository -Default -InstallationPolicy Trusted -ErrorAction Stop }
+        Catch { Exit }
+    } ElseIf ($ArrPSRepos | ?{$_.Name -eq "PSGallery" -and $_.InstallationPolicy -ne "Trusted"}) {
+        Try { Set-PSRepository PSGallery -InstallationPolicy Trusted -ErrorAction Stop }
+        Catch { Exit }
+    }
+    If ((Get-Module -ListAvailable).Name -notcontains "PSReadLine") {
+        Try { Install-Module PSReadLine -Force -ErrorAction Stop }
+        Catch { Exit }
+    }
+
 }
 
-# Check if the BurntToastNotification module is installed, and install it if not
-$module = Get-Module -ListAvailable -Name BurntToastNotification
+# Check if the BurntToast module is installed, and install the latest version if not
+$module = Get-Module -ListAvailable -Name BurntToast
 if (-not $module) {
-    Write-Host "Installing BurntToastNotification module..."
-    Install-Module -Name BurntToastNotification -Force -Scope CurrentUser
+    Write-Host "Installing the latest version of the BurntToast module..."
+    Install-Module -Name BurntToast -Force -Scope CurrentUser
+}
+else {
+    # Update the BurntToast module to the latest version
+    Write-Host "Updating the BurntToast module to the latest version..."
+    Install-Module -Name BurntToast -Force -Scope CurrentUser
 }
 
-# Import the BurntToastNotification module
-Import-Module BurntToastNotification
+# Import the BurntToast module
+Import-Module BurntToast
 
-# Import the ScheduledTasks module
-Import-Module ScheduledTasks
 
 
 # Define an array of hashtables with the printer configurations
@@ -121,17 +143,27 @@ $printerConfigs = @(
     @{ Name = 'West Fayetteville'; IPAddress = '192.168.204.200' },
     @{ Name = 'Woodgreen'; IPAddress = '192.168.64.200' },
     @{ Name = 'Zebulon Green'; IPAddress = '192.168.103.200' },
-    @{ Name = 'Company Printer'; IPAddress = '172.30.125.202' }
+    @{ Name = 'TEST Green'; IPAddress = '172.30.125.202' }
 )
 
-# Function to let the user know the printer was installed
-function Show-ToastNotification($printerName) {
+function Show-ToastNotification($printerName, $isSuccess) {
     $logoPath = Join-Path $tempDirectoryPath "FDSLogo.png"
-    $toastConfig = New-BTNotification -AppId "FDSPrinterInstaller" -Title "Printer Installed" -Content "$printerName has been installed." -ImagePath $logoPath
-    $toastConfig.RemoveFromHistory = $true
-    $toastConfig.Silent = $true
-    $toast = New-BTNotification -Config $toastConfig
-    $toast.Show()
+    $toastParams = @{
+        AppLogo = $logoPath
+    }
+
+    if ($PSBoundParameters.ContainsKey('isSuccess')) {
+        if ($isSuccess) {
+            $toastParams.Text = "$printerName has been installed."
+            Write-Host "Displaying success notification for $printerName"
+        }
+        else {
+            $toastParams.Text = "Printer for '$printerName' failed to install. Please call support at 910-483-5395."
+            Write-Host "Displaying failure notification for $printerName"
+        }
+    }
+
+    $null = New-BurntToastNotification @toastParams
 }
 
 # Function to update the PrintersInstalled.txt and PrinterUninstall.txt files
@@ -233,6 +265,10 @@ catch {
                 Add-Content -Path $logFilePath -Value $errorMessage
                 Add-Content -Path $logFilePath -Value $process.StandardOutput
                 Add-Content -Path $logFilePath -Value $process.StandardError
+
+   		# Show the failure notification
+   		Show-ToastNotification -printerName $config.Name -isSuccess $false
+
             } else {
                 $message = "The $($config.Name) printer was installed."
                 Write-Host $message
@@ -240,10 +276,10 @@ catch {
                 # Update the PrintersInstalled.txt and PrinterUninstall.txt files
                 UpdatePrinterLogFiles $config.Name
 		
-		# Show the toast notification
-		Show-ToastNotification -printerName $config.Name
-
+		# Show the success notification
+    		Show-ToastNotification -printerName $config.Name -isSuccess $true
             }
+
             $matched = $true
             break
         }
@@ -253,6 +289,10 @@ catch {
     if (-not $matched) {
         $errorMessage = "No matching IP address found for printer installation."
         Write-Warning $errorMessage
+
+	# Show the failure notification
+    	Show-ToastNotification -printerName $config.Name -isSuccess $false
+
         Add-Content -Path $logFilePath -Value $errorMessage
     }
 }
@@ -289,8 +329,9 @@ if ($printerDriver) {
             # Update the PrintersInstalled.txt and PrinterUninstall.txt files
             UpdatePrinterLogFiles $config.Name
 
-	    # Show the toast notification
-	    Show-ToastNotification -printerName $config.Name
+	    # Show the success notification
+	    Show-ToastNotification -printerName $config.Name -isSuccess $true
+
 
             $matched = $true
             break
@@ -309,14 +350,20 @@ if ($printerDriver) {
     if (-not $matched) {
         $errorMessage = "No matching IP address found for printer installation."
         Write-Warning $errorMessage
+
+   	# Show the failure notification
+        Show-ToastNotification -printerName $config.Name -isSuccess $false
+
+
         Add-Content -Path $logFilePath -Value $errorMessage
     }
 }
 
 # Create a scheduled task to delete the specified files after 5 minutes
-$action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath' -Force`""
+$action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath', '$tempImagePath'  -Force`""
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $task = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "DeleteTempFiles" -Description "Delete temporary files after 5 minutes"
 
 Write-Host "Scheduled task 'DeleteTempFiles' created. It will run in 5 minutes."
+
