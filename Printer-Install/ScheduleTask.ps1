@@ -1,7 +1,7 @@
 # Remove any existing scheduled task with the same name
-    $existingTask = Get-ScheduledTask -TaskName "DeleteTempFiles" -ErrorAction SilentlyContinue
+    $existingTask = Get-ScheduledTask -TaskName "DeleteFiles" -ErrorAction SilentlyContinue
     if ($existingTask) {
-        Write-Host "Removing existing scheduled task 'DeleteTempFiles'..."
+        Write-Host "Removing existing scheduled task 'DeleteFiles'..."
         Unregister-ScheduledTask -TaskName "DeleteFiles" -Confirm:$false
 }
 
@@ -11,4 +11,4 @@ $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $null = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "DeleteFiles" -Description "Delete temporary files after 5 minutes"
 
-Write-Host "Scheduled task 'DeleteTempFiles' created. It will run in 5 minutes."
+Write-Host "Scheduled task 'DeleteFiles' created. It will run in 5 minutes."
