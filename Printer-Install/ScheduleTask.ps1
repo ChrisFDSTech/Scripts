@@ -2,7 +2,7 @@
     $existingTask = Get-ScheduledTask -TaskName "DeleteTempFiles" -ErrorAction SilentlyContinue
     if ($existingTask) {
         Write-Host "Removing existing scheduled task 'DeleteTempFiles'..."
-        Unregister-ScheduledTask -TaskName "DeleteTempFiles" -Confirm:$false
+        Unregister-ScheduledTask -TaskName "DeleteFiles" -Confirm:$false
 }
 
 # Create a scheduled task to delete the specified files after 5 minutes
