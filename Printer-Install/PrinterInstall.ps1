@@ -51,6 +51,20 @@
 
 #>
 
+# Set the PowerShell execution policy
+Set-ExecutionPolicy RemoteSigned -Force
+
+# Install the BurntToast module in the current user's scope
+$currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+$modulePath = Join-Path -Path ($env:USERPROFILE.Replace("\", "/")) -ChildPath "Documents/WindowsPowerShell/Modules"
+if (-not (Test-Path $modulePath)) {
+    New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+}
+Save-Module -Name BurntToast -Path $modulePath -Force
+
+# Import the BurntToast module
+Import-Module BurntToast
+
 If ($PSVersionTable.PSVersion -ge [version]"5.0" -and (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\').Release -ge 379893) {
 
     If ([Net.ServicePointManager]::SecurityProtocol -ne [Net.SecurityProtocolType]::SystemDefault) {
@@ -76,21 +90,6 @@ If ($PSVersionTable.PSVersion -ge [version]"5.0" -and (Get-ItemProperty 'HKLM:\S
     }
 
 }
-
-# Check if the BurntToast module is installed, and install the latest version if not
-$module = Get-Module -ListAvailable -Name BurntToast
-if (-not $module) {
-    Write-Host "Installing the latest version of the BurntToast module..."
-    Install-Module -Name BurntToast -Force -Scope CurrentUser
-}
-else {
-    # Update the BurntToast module to the latest version
-    Write-Host "Updating the BurntToast module to the latest version..."
-    Install-Module -Name BurntToast -Force -Scope CurrentUser
-}
-
-# Import the BurntToast module
-Import-Module BurntToast
 
 
 
@@ -332,13 +331,6 @@ if ($printerDriver) {
         }
     }
 
-    # Remove any existing scheduled task with the same name
-    $existingTask = Get-ScheduledTask -TaskName "DeleteTempFiles" -ErrorAction SilentlyContinue
-    if ($existingTask) {
-        Write-Host "Removing existing scheduled task 'DeleteTempFiles'..."
-        Unregister-ScheduledTask -TaskName "DeleteTempFiles" -Confirm:$false
-    }
-
     # If no matching IP address was found, log the error
     if (-not $matched) {
         $errorMessage = "No matching IP address found for printer installation."
@@ -347,10 +339,14 @@ if ($printerDriver) {
     }
 }
 
-# Create a scheduled task to delete the specified files after 5 minutes
-$action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath' -Force`""
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
-$principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-$task = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "DeleteTempFiles" -Description "Delete temporary files after 5 minutes"
+# Get the current user's SID
+$currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
 
-Write-Host "Scheduled task 'DeleteTempFiles' created. It will run in 5 minutes."
+# Create a scheduled task to run the script in the user's context
+$action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-File `"$($script:MyInvocation.MyCommand.Path)`""
+$trigger = New-ScheduledTaskTrigger -AtLogOn
+$principal = New-ScheduledTaskPrincipal -UserId $currentUser.Value -LogonType Interactive
+$settings = New-ScheduledTaskSettingsSet
+$task = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -Settings $settings -TaskName "RunScriptInUserContext" -Description "Run the script in the user's context"
+
+Write-Host "Scheduled task 'RunScriptInUserContext' created. The script will run when the user logs on."
