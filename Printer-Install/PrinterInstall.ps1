@@ -54,7 +54,8 @@
 function Start-Installation($printerName) {
     $installJob = Start-Job -ScriptBlock {
         param($printerName)
-
+}
+}
         # Show the install window
         Show-InstallWindow -printerName $printerName
 
