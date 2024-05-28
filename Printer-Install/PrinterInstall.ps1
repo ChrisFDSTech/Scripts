@@ -362,4 +362,19 @@ if ($printerDriver) {
     }
 }
 
-& $schedTaskPath
+try {
+    $processStartInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $processStartInfo.FileName = "powershell.exe"
+    $processStartInfo.Arguments = "-ExecutionPolicy Bypass -File `"$schedTaskPath`""
+    $processStartInfo.Verb = "RunAs"
+
+    $process = [System.Diagnostics.Process]::Start($processStartInfo)
+    $process.WaitForExit()
+
+    if ($process.ExitCode -ne 0) {
+        Write-Warning "Failed to execute the scheduled task script with exit code: $($process.ExitCode)"
+    }
+}
+catch {
+    Write-Warning "Failed to execute the scheduled task script: $_"
+}
