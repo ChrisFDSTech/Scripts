@@ -20,6 +20,6 @@ $printerUninstallLogPath = Join-Path $tempDirectoryPath "PrinterUninstall.txt"
 $action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath', '$tempImagePath', '$schedTaskPath'  -Force`""
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-$null = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "DeleteFiles" -Description "Delete temporary files after 5 minutes"
-
+$TASK = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "DeleteFiles" -Description "Delete temporary files after 5 minutes"
+$TASK
 Write-Host "Scheduled task 'DeleteFiles' created. It will run in 5 minutes."
