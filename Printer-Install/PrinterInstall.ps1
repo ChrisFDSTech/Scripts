@@ -58,12 +58,6 @@ function Start-Installation($printerName) {
         # Show the install window
         Show-InstallWindow -printerName $printerName
 
-        # Your installation code here
-        # ...
-    } -ArgumentList $printerName
-
-    return $installJob
-}
 
 $installJob = Start-Installation -printerName "Installing Prerequisites"
 If ($PSVersionTable.PSVersion -ge [version]"5.0" -and (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\').Release -ge 379893) {
@@ -362,7 +356,11 @@ if ($printerDriver) {
             $installJob | Wait-Job | Receive-Job
             $matched = $true
             break
-        }
+        
+	} -ArgumentList $printerName
+ 
+ 	return $installJob
+
     }
 
   
