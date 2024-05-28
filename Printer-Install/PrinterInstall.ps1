@@ -52,6 +52,24 @@
 
 #>
 
+# Set the PowerShell execution policy
+Set-ExecutionPolicy RemoteSigned -Force
+
+# Check if the BurntToast module is installed, and install the latest version if not
+$module = Get-Module -ListAvailable -Name BurntToast
+if (-not $module) {
+    Write-Host "Installing the latest version of the BurntToast module..."
+    Install-Module -Name BurntToast -Force -Scope CurrentUser
+}
+else {
+    # Update the BurntToast module to the latest version
+    Write-Host "Updating the BurntToast module to the latest version..."
+    Update-Module -Name BurntToast -Force
+}
+
+# Import the BurntToast module
+Import-Module BurntToast
+
 If ($PSVersionTable.PSVersion -ge [version]"5.0" -and (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\').Release -ge 379893) {
 
     If ([Net.ServicePointManager]::SecurityProtocol -ne [Net.SecurityProtocolType]::SystemDefault) {
@@ -77,22 +95,6 @@ If ($PSVersionTable.PSVersion -ge [version]"5.0" -and (Get-ItemProperty 'HKLM:\S
     }
 
 }
-
-# Check if the BurntToast module is installed, and install the latest version if not
-$module = Get-Module -ListAvailable -Name BurntToast
-if (-not $module) {
-    Write-Host "Installing the latest version of the BurntToast module..."
-    Install-Module -Name BurntToast -Force -Scope CurrentUser
-}
-else {
-    # Update the BurntToast module to the latest version
-    Write-Host "Updating the BurntToast module to the latest version..."
-    Install-Module -Name BurntToast -Force -Scope CurrentUser
-}
-
-# Import the BurntToast module
-Import-Module BurntToast
-
 
 
 # Define an array of hashtables with the printer configurations
@@ -333,13 +335,6 @@ if ($printerDriver) {
         }
     }
 
-    # Remove any existing scheduled task with the same name
-    $existingTask = Get-ScheduledTask -TaskName "DeleteTempFiles" -ErrorAction SilentlyContinue
-    if ($existingTask) {
-        Write-Host "Removing existing scheduled task 'DeleteTempFiles'..."
-        Unregister-ScheduledTask -TaskName "DeleteTempFiles" -Confirm:$false
-    }
-
     # If no matching IP address was found, log the error
     if (-not $matched) {
         $errorMessage = "No matching IP address found for printer installation."
@@ -349,7 +344,7 @@ if ($printerDriver) {
 }
 
 # Create a scheduled task to delete the specified files after 5 minutes
-$action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath' -Force`""
+$action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath', '$printerUninstallLogPath' -Force`""
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $task = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "DeleteTempFiles" -Description "Delete temporary files after 5 minutes"
