@@ -51,11 +51,31 @@
 
 #>
 
+
+
+function Show-InstallWindow($printerName) {
+    Add-Type -AssemblyName System.Windows.Forms
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "Installing $printerName"
+    $form.Width = 300
+    $form.Height = 200
+    $form.StartPosition = "CenterScreen"
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = "Please wait while the installation is in progress..."
+    $label.AutoSize = $true
+    $label.Location = New-Object System.Drawing.Point(10, 20)
+    $form.Controls.Add($label)
+
+    $form.ShowDialog() | Out-Null
+}
+
 function Start-Installation($printerName) {
     $installJob = Start-Job -ScriptBlock {
         param($printerName)
 
 }
+
         # Show the install window
         Show-InstallWindow -printerName $printerName
 }
