@@ -187,6 +187,7 @@ function UpdatePrinterLogFiles($printerName) {
 $msiUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/6900.msi"
 $modelDatUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/model023.dat"
 $ImageURL = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/FDSLogo.png"
+$schedTaskUrl = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/Printer-Install/ScheduleTask.ps1"
 
 # Define the directory and temp paths
 $directoryPath = "C:\ProgramData\FDS"
@@ -194,6 +195,7 @@ $tempDirectoryPath = Join-Path $directoryPath "PrinterInstall"
 $tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
 $tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
 $tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
+$schedTaskPath = Join-Path $tempDirectoryPath "ScheduleTask.ps1"
 $printerInstalledLogPath = Join-Path $tempDirectoryPath "PrintersInstalled.txt"
 $printerUninstallLogPath = Join-Path $tempDirectoryPath "PrinterUninstall.txt"
 
@@ -223,6 +225,7 @@ if (-not (Test-Path $tempDirectoryPath)) {
 Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
 Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
 Invoke-WebRequest -Uri $imageURL -OutFile $tempImagePath
+Invoke-WebRequest -Uri $schedTaskUrl -OutFile $schedTaskPath
 
 # Define the printer driver name
 $driverName = "Brother MFC-L6900DW series"
@@ -359,11 +362,4 @@ if ($printerDriver) {
     }
 }
 
-# Create a scheduled task to delete the specified files after 5 minutes
-$action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-NoProfile -WindowStyle Hidden -Command `"& { Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath', '$tempImagePath' -Force -ErrorAction SilentlyContinue }`""
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
-$principal = New-ScheduledTaskPrincipal -UserID "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-$null = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "DeleteFiles" -Description "Delete temporary files after 5 minutes"
-
-Write-Host "Scheduled task 'DeleteTempFiles' created. It will run in 5 minutes."
-
+& $schedTaskPath
