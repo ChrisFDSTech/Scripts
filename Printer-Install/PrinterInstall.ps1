@@ -51,6 +51,21 @@
 
 #>
 
+function Start-Installation($printerName) {
+    $installJob = Start-Job -ScriptBlock {
+        param($printerName)
+
+        # Show the install window
+        Show-InstallWindow -printerName $printerName
+
+        # Your installation code here
+        # ...
+    } -ArgumentList $printerName
+
+    return $installJob
+}
+
+$installJob = Start-Installation -printerName "Installing Prerequisites"
 If ($PSVersionTable.PSVersion -ge [version]"5.0" -and (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\').Release -ge 379893) {
 
     If ([Net.ServicePointManager]::SecurityProtocol -ne [Net.SecurityProtocolType]::SystemDefault) {
@@ -92,6 +107,7 @@ else {
 # Import the BurntToast module
 Import-Module BurntToast
 
+$installJob | Wait-Job | Receive-Job
 
 
 # Define an array of hashtables with the printer configurations
@@ -199,6 +215,8 @@ $schedTaskPath = Join-Path $tempDirectoryPath "ScheduleTask.ps1"
 $printerInstalledLogPath = Join-Path $tempDirectoryPath "PrintersInstalled.txt"
 $printerUninstallLogPath = Join-Path $tempDirectoryPath "PrinterUninstall.txt"
 
+$installJob = Start-Installation -printerName "Downloading Files"
+
 # Ensure the temp directory exists
 if (-not (Test-Path $directoryPath)) {
     try {
@@ -226,6 +244,8 @@ Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
 Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
 Invoke-WebRequest -Uri $imageURL -OutFile $tempImagePath
 Invoke-WebRequest -Uri $schedTaskUrl -OutFile $schedTaskPath
+
+$installJob | Wait-Job | Receive-Job
 
 # Define the printer driver name
 $driverName = "Brother MFC-L6900DW series"
@@ -255,6 +275,8 @@ catch {
         # Truncate the IP address from the configurations to the first three octets
         $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
         if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
+	$installJob = Start-Installation -printerName $config.Name
+	
             $logFilePath = Join-Path $tempDirectoryPath "printer-install.log"
 
             $arguments = $commandTemplate -f $tempMsiPath, $config.Name, $config.IPAddress
@@ -283,6 +305,7 @@ catch {
     		Show-ToastNotification -printerName $config.Name -isSuccess $true
             }
 
+	    $installJob | Wait-Job | Receive-Job
             $matched = $true
             break
         }
@@ -314,6 +337,7 @@ if ($printerDriver) {
         # Truncate the IP address from the configurations to the first three octets
         $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
         if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
+	$installJob = Start-Installation -printerName $config.Name
             # Check if the printer port already exists
             $portName = "IP_$($config.IPAddress)"
             $existingPort = Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue
@@ -335,7 +359,7 @@ if ($printerDriver) {
 	    # Show the success notification
 	    Show-ToastNotification -printerName $config.Name -isSuccess $true
 
-
+            $installJob | Wait-Job | Receive-Job
             $matched = $true
             break
         }
