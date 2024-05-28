@@ -143,7 +143,7 @@ $printerConfigs = @(
     @{ Name = 'West Fayetteville'; IPAddress = '192.168.204.200' },
     @{ Name = 'Woodgreen'; IPAddress = '192.168.64.200' },
     @{ Name = 'Zebulon Green'; IPAddress = '192.168.103.200' },
-    @{ Name = 'TEST Green'; IPAddress = '172.30.125.202' }
+    @{ Name = 'InTune'; IPAddress = '172.30.125.202' }
 )
 
 function Show-ToastNotification($printerName, $isSuccess) {
