@@ -143,7 +143,7 @@ $printerConfigs = @(
     @{ Name = 'West Fayetteville'; IPAddress = '192.168.204.200' },
     @{ Name = 'Woodgreen'; IPAddress = '192.168.64.200' },
     @{ Name = 'Zebulon Green'; IPAddress = '192.168.103.200' },
-    @{ Name = 'InTune'; IPAddress = '172.30.125.202' }
+    @{ Name = 'InTune Test'; IPAddress = '172.30.125.203' }
 )
 
 function Show-ToastNotification($printerName, $isSuccess) {
@@ -158,7 +158,7 @@ function Show-ToastNotification($printerName, $isSuccess) {
             Write-Host "Displaying success notification for $printerName"
         }
         else {
-            $toastParams.Text = "Printer for '$printerName' failed to install. Please call support at 910-483-5395."
+            $toastParams.Text = "Printer '$printerName' failed to install. Please call support at 910-483-5395."
             Write-Host "Displaying failure notification for $printerName"
         }
     }
@@ -266,20 +266,19 @@ catch {
                 Add-Content -Path $logFilePath -Value $process.StandardOutput
                 Add-Content -Path $logFilePath -Value $process.StandardError
 
-   		# Show the failure notification
-   		Show-ToastNotification -printerName $config.Name -isSuccess $false
-
-            } else {
+                # Show the failure notification
+                Show-ToastNotification -printerName $config.Name -isSuccess $false
+            }
+            else {
                 $message = "The $($config.Name) printer was installed."
                 Write-Host $message
 
                 # Update the PrintersInstalled.txt and PrinterUninstall.txt files
                 UpdatePrinterLogFiles $config.Name
-		
-		# Show the success notification
-    		Show-ToastNotification -printerName $config.Name -isSuccess $true
-            }
 
+                # Show the success notification
+                Show-ToastNotification -printerName $config.Name -isSuccess $true
+            }
             $matched = $true
             break
         }
@@ -289,10 +288,6 @@ catch {
     if (-not $matched) {
         $errorMessage = "No matching IP address found for printer installation."
         Write-Warning $errorMessage
-
-	# Show the failure notification
-    	Show-ToastNotification -printerName $config.Name -isSuccess $false
-
         Add-Content -Path $logFilePath -Value $errorMessage
     }
 }
@@ -329,9 +324,8 @@ if ($printerDriver) {
             # Update the PrintersInstalled.txt and PrinterUninstall.txt files
             UpdatePrinterLogFiles $config.Name
 
-	    # Show the success notification
-	    Show-ToastNotification -printerName $config.Name -isSuccess $true
-
+            # Show the success notification
+            Show-ToastNotification -printerName $config.Name -isSuccess $true
 
             $matched = $true
             break
@@ -343,24 +337,18 @@ if ($printerDriver) {
     if ($existingTask) {
         Write-Host "Removing existing scheduled task 'DeleteTempFiles'..."
         Unregister-ScheduledTask -TaskName "DeleteTempFiles" -Confirm:$false
-}
-
+    }
 
     # If no matching IP address was found, log the error
     if (-not $matched) {
         $errorMessage = "No matching IP address found for printer installation."
         Write-Warning $errorMessage
-
-   	# Show the failure notification
-        Show-ToastNotification -printerName $config.Name -isSuccess $false
-
-
         Add-Content -Path $logFilePath -Value $errorMessage
     }
 }
 
 # Create a scheduled task to delete the specified files after 5 minutes
-$action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath', '$tempImagePath'  -Force`""
+$action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath' -Force`""
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $task = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "DeleteTempFiles" -Description "Delete temporary files after 5 minutes"
