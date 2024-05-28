@@ -1,3 +1,14 @@
+# Define the directory and temp paths
+$directoryPath = "C:\ProgramData\FDS"
+$tempDirectoryPath = Join-Path $directoryPath "PrinterInstall"
+$tempMsiPath = Join-Path $tempDirectoryPath "6900.msi"
+$tempModelDatPath = Join-Path $tempDirectoryPath "model023.dat"
+$tempImagePath = Join-Path $tempDirectoryPath "FDSLogo.png"
+$schedTaskPath = Join-Path $tempDirectoryPath "ScheduleTask.ps1"
+$printerInstalledLogPath = Join-Path $tempDirectoryPath "PrintersInstalled.txt"
+$printerUninstallLogPath = Join-Path $tempDirectoryPath "PrinterUninstall.txt"
+
+
 # Remove any existing scheduled task with the same name
     $existingTask = Get-ScheduledTask -TaskName "DeleteFiles" -ErrorAction SilentlyContinue
     if ($existingTask) {
