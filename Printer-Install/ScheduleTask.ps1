@@ -6,7 +6,7 @@
 }
 
 # Create a scheduled task to delete the specified files after 5 minutes
-$action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath', '$tempImagePath'  -Force`""
+$action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath', '$tempImagePath', '$schedTaskPath'  -Force`""
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5)
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $null = Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "DeleteFiles" -Description "Delete temporary files after 5 minutes"
