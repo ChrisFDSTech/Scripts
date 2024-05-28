@@ -10,11 +10,12 @@ $printerUninstallLogPath = Join-Path $tempDirectoryPath "PrinterUninstall.txt"
 
 
 # Remove any existing scheduled task with the same name
-    $existingTask = Get-ScheduledTask -TaskName "DeleteFiles" -ErrorAction SilentlyContinue
-    if ($existingTask) {
-        Write-Host "Removing existing scheduled task 'DeleteFiles'..."
-        Unregister-ScheduledTask -TaskName "DeleteFiles" -Confirm:$false
+$existingTask = Get-ScheduledTask -TaskName "DeleteFiles" -ErrorAction SilentlyContinue
+if ($existingTask) {
+    Write-Host "Removing existing scheduled task 'DeleteFiles'..."
+    Unregister-ScheduledTask -TaskName "DeleteFiles" -Confirm:$false
 }
+
 
 # Create a scheduled task to delete the specified files after 5 minutes
 $action = New-ScheduledTaskAction -Execute 'PowerShell.exe' -Argument "-Command `"Remove-Item -Path '$tempMsiPath', '$tempModelDatPath', '$printerInstalledLogPath', '$tempImagePath', '$schedTaskPath'  -Force`""
