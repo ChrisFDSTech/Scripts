@@ -18,36 +18,27 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore
 
         <TextBox Grid.Row="1" Name="logTextBox" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="10" IsReadOnly="True"/>
 
-        <ProgressBar Grid.Row="2" Name="progressBar" Height="20" Margin="10" IsIndeterminate="True"/>
+        <ProgressBar Grid.Row="2" Name="progressBar" Height="20" Margin="10" IsIndeterminate="False"/>
     </Grid>
 </Window>
 "@
 
 # Create the window from the XAML markup
-try {
-    $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $xaml))
-}
-catch {
-    Write-Error "Failed to create WPF window: $_"
-    return
-}
+$window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $xaml))
 
 # Function to update the log text box
 function Update-LogTextBox($message) {
-    if ($window -ne $null) {
-        try {
-            $window.Dispatcher.Invoke([Action]{
-                $window.logTextBox.AppendText("$message`n")
-                $window.logTextBox.ScrollToEnd()
-            }, "Normal")
-        }
-        catch {
-            Write-Error "Failed to update log text box: $_"
-        }
-    }
-    else {
-        Write-Output $message
-    }
+    $window.Dispatcher.Invoke([Action]{
+        $window.logTextBox.AppendText("$message`n")
+        $window.logTextBox.ScrollToEnd()
+    }, "Normal")
+}
+
+# Function to update the progress bar
+function Update-ProgressBar($value) {
+    $window.Dispatcher.Invoke([Action]{
+        $window.progressBar.Value = $value
+    }, "Normal")
 }
 
 # Function to show the installation window
@@ -68,112 +59,10 @@ function Show-FailureNotification($printerName) {
     Update-LogTextBox "Failed to install printer $printerName. Please call support at 910-483-5395."
 }
 
-# Function to start the installation process
-function Start-Installation($printerName) {
-    $installJob = Start-Job -ScriptBlock {
-        param($printerName)
-
-        # Show the install window
-        Show-InstallWindow -printerName $printerName
-
-        # Define a template for the command
-        $commandTemplate = '/i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}" /qn /NORESTART'
-
-        # Get the current IP address of the machine
-        $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
-
-        # Truncate the current IP address to the first three octets
-        $TruncatedCurrentIPAddress = $CurrentIPAddress -replace '\.\d+$'
-
-        # Iterate through the array to find a matching IP address and execute the command
-        $matched = $false
-        foreach ($config in $printerConfigs) {
-            # Truncate the IP address from the configurations to the first three octets
-            $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
-            if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
-                $logFilePath = Join-Path $tempDirectoryPath "printer-install.log"
-
-                $arguments = $commandTemplate -f $tempMsiPath, $config.Name, $config.IPAddress
-                Update-LogTextBox "Executing command: msiexec $arguments"
-                $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
-                $process.WaitForExit()
-
-                if ($process.ExitCode -ne 0) {
-                    $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
-                    Update-LogTextBox $errorMessage
-                    Add-Content -Path $logFilePath -Value $errorMessage
-                    Add-Content -Path $logFilePath -Value $process.StandardOutput
-                    Add-Content -Path $logFilePath -Value $process.StandardError
-
-                    # Set $installationSuccessful to $false
-                    $installationSuccessful = $false
-                } else {
-                    $message = "The $($config.Name) printer was installed."
-                    Update-LogTextBox $message
-
-                    # Update the PrintersInstalled.txt and PrinterUninstall.txt files
-                    UpdatePrinterLogFiles $config.Name
-
-                    # Set $installationSuccessful to $true
-                    $installationSuccessful = $true
-                }
-
-                $matched = $true
-                break
-            }
-        }
-
-        # If no matching IP address was found, log the error
-        if (-not $matched) {
-            $errorMessage = "No matching IP address found for printer installation."
-            Update-LogTextBox $errorMessage
-
-            # Set $installationSuccessful to $false
-            $installationSuccessful = $false
-
-            Add-Content -Path $logFilePath -Value $errorMessage
-        }
-
-        # Show the success or failure notification
-        if ($installationSuccessful) {
-            Show-SuccessNotification -printerName $printerName
-        } else {
-            Show-FailureNotification -printerName $printerName
-        }
-    } -ArgumentList $printerName
-
-    return $installJob
-}
-
-If ($PSVersionTable.PSVersion -ge [version]"5.0" -and (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\').Release -ge 379893) {
-
-    If ([Net.ServicePointManager]::SecurityProtocol -ne [Net.SecurityProtocolType]::SystemDefault) {
-         Try { [Net.ServicePointManager]::SecurityProtocol = @([Net.SecurityProtocolType]::Tls,[Net.SecurityProtocolType]::Tls11,[Net.SecurityProtocolType]::Tls12)}
-         Catch { Exit }
-    }
-
-    If ((Get-PackageProvider).Name -notcontains "NuGet") {
-        Try { Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -ErrorAction Stop }
-        Catch { Exit }
-    }
-    $ArrPSRepos = Get-PSRepository
-    If ($ArrPSRepos.Name -notcontains "PSGallery") {
-        Try { Register-PSRepository -Default -InstallationPolicy Trusted -ErrorAction Stop }
-        Catch { Exit }
-    } ElseIf ($ArrPSRepos | ?{$_.Name -eq "PSGallery" -and $_.InstallationPolicy -ne "Trusted"}) {
-        Try { Set-PSRepository PSGallery -InstallationPolicy Trusted -ErrorAction Stop }
-        Catch { Exit }
-    }
-    If ((Get-Module -ListAvailable).Name -notcontains "PSReadLine") {
-        Try { Install-Module PSReadLine -Force -ErrorAction Stop }
-        Catch { Exit }
-    }
-
-}
 
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
-    @{ Name = 'Azalea Manor'; IPAddress = '192.168.14.200' },
+        @{ Name = 'Azalea Manor'; IPAddress = '192.168.14.200' },
     @{ Name = 'Bennettsville Green'; IPAddress = '192.168.5.200' },
     @{ Name = 'Benson Green'; IPAddress = '192.168.192.200' },
     @{ Name = 'Blanton Green'; IPAddress = '192.168.41.200' },
@@ -429,3 +318,15 @@ try {
 catch {
     Update-LogTextBox "Failed to execute the scheduled task script: $_"
 }
+
+# Start the script in an interactive mode
+$null = $window.Dispatcher.InvokeAsync({
+    # Initiate the installation process
+    $installJob = Start-Installation -printerName "Brother MFC-L6900DW"
+}).AsTask().Result
+
+# Keep the script running until the installation is complete
+$installJob | Wait-Job
+
+# Close the window
+$window.Close()
