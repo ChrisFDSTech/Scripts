@@ -1,56 +1,3 @@
-<#
-.DESCRIPTION
-    This script checks the endpoint for the current IP address and installs the associated printer with its properties.
-
-.INPUTS
-    Installation from Company Portal..
-
-.OUTPUTS
-    Intune scripts are executed to install printers.
-
-.NOTES
-    Version:        5.0
-    Author:         Chris Braeuer
-    Creation Date:  5/17/2024
-
-.RELEASE NOTES
-    Version 1.0 (5/17/2024):
-    - Initial version of the script written.
-    
-    Version 2.0 (5/20/2024
-    - Fixed Issue with logo (Changed from .ico to .png)
-    - Changed the way the downloads were retrieved with WindowsInstallModule
-    - Added a popup windows for the printer install
-
-    Version 3.0 (5/21/2024)
-    - Changed to Invoke-WebRequest cmdlet
-    - Created a more appealing popup window
-    - Fixed issue with exit code: 1619
-    - Fixed popup window with ShowDiag
-    - removed WGET module
-
-    Version 4.0 (5/22/2024)
-    - Added check for printer driver installation
-    - If driver is installed, use the existing driver instead of attempting to install it again
-    - Removed code to download MSI and DAT files
-    - Added logic to download and install the printer driver if it's not already installed
-    - Updated script to use Add-PrinterDriver and Add-Printer cmdlets instead of rundll32.exe
-    - Fixed issues with downloading the DAT file and adding the printer port
-    - Added logic to download and install the printer driver files (MSI and DAT) if the driver is not already installed
-    - Updated script to use pnputil.exe to install the printer driver
-    - Added a check to skip adding the printer port if it already exists
-    - Capture and display the error output from pnputil.exe when installing the printer driver
-    - Capture and display the error output from pnputil.exe when installing the printer driver
-    
-    Version 5.0 (5/25/2024)
-    - Improved the logic for installing the printer driver and printer
-    - If the printer driver is not installed, the script now uses the same logic as the previous version to install the driver and printer using the `msiexec` command
-    - If the printer driver is already installed, the script proceeds with the new logic to check for the printer port, add the printer port if it doesn't exist, and then add the printer
-    - Added better error handling and logging for failed printer installations
-    - Retained the existing functionality to display a popup message with the FDS logo upon successful printer installation or if there's an issue with the installation
-
-#>
-
 # Load the WPF assemblies
 Add-Type -AssemblyName PresentationFramework, PresentationCore
 
@@ -90,7 +37,9 @@ function Update-LogTextBox($message) {
 # Function to show the installation window
 function Show-InstallWindow($printerName) {
     $window.Title = "Installing $printerName"
-    $window.ShowDialog() | Out-Null
+    $null = $window.Dispatcher.InvokeAsync({
+        $window.ShowDialog()
+    }).AsTask().Result
 }
 
 # Function to show a success notification
@@ -111,8 +60,63 @@ function Start-Installation($printerName) {
         # Show the install window
         Show-InstallWindow -printerName $printerName
 
-        # Your installation code here
-        # ...
+        # Define a template for the command
+        $commandTemplate = '/i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}" /qn /NORESTART'
+
+        # Get the current IP address of the machine
+        $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
+
+        # Truncate the current IP address to the first three octets
+        $TruncatedCurrentIPAddress = $CurrentIPAddress -replace '\.\d+$'
+
+        # Iterate through the array to find a matching IP address and execute the command
+        $matched = $false
+        foreach ($config in $printerConfigs) {
+            # Truncate the IP address from the configurations to the first three octets
+            $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
+            if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
+                $logFilePath = Join-Path $tempDirectoryPath "printer-install.log"
+
+                $arguments = $commandTemplate -f $tempMsiPath, $config.Name, $config.IPAddress
+                Update-LogTextBox "Executing command: msiexec $arguments"
+                $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
+                $process.WaitForExit()
+
+                if ($process.ExitCode -ne 0) {
+                    $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
+                    Update-LogTextBox $errorMessage
+                    Add-Content -Path $logFilePath -Value $errorMessage
+                    Add-Content -Path $logFilePath -Value $process.StandardOutput
+                    Add-Content -Path $logFilePath -Value $process.StandardError
+
+                    # Set $installationSuccessful to $false
+                    $installationSuccessful = $false
+                } else {
+                    $message = "The $($config.Name) printer was installed."
+                    Update-LogTextBox $message
+
+                    # Update the PrintersInstalled.txt and PrinterUninstall.txt files
+                    UpdatePrinterLogFiles $config.Name
+
+                    # Set $installationSuccessful to $true
+                    $installationSuccessful = $true
+                }
+
+                $matched = $true
+                break
+            }
+        }
+
+        # If no matching IP address was found, log the error
+        if (-not $matched) {
+            $errorMessage = "No matching IP address found for printer installation."
+            Update-LogTextBox $errorMessage
+
+            # Set $installationSuccessful to $false
+            $installationSuccessful = $false
+
+            Add-Content -Path $logFilePath -Value $errorMessage
+        }
 
         # Show the success or failure notification
         if ($installationSuccessful) {
@@ -150,21 +154,6 @@ If ($PSVersionTable.PSVersion -ge [version]"5.0" -and (Get-ItemProperty 'HKLM:\S
     }
 
 }
-
-# Check if the BurntToast module is installed, and install the latest version if not
-$module = Get-Module -ListAvailable -Name BurntToast
-if (-not $module) {
-    Write-Host "Installing the latest version of the BurntToast module..."
-    Install-Module -Name BurntToast -Force -Scope CurrentUser
-}
-else {
-    # Update the BurntToast module to the latest version
-    Write-Host "Updating the BurntToast module to the latest version..."
-    Install-Module -Name BurntToast -Force -Scope CurrentUser
-}
-
-# Import the BurntToast module
-Import-Module BurntToast
 
 # Define an array of hashtables with the printer configurations
 $printerConfigs = @(
@@ -274,6 +263,7 @@ if (-not (Test-Path $tempDirectoryPath)) {
 }
 
 # Download the MSI file, .dat File, and the Logo file from GitHub to the temp directory
+Update-LogTextBox "Downloading required files..."
 Invoke-WebRequest -Uri $msiUrl -OutFile $tempMsiPath
 Invoke-WebRequest -Uri $modelDatUrl -OutFile $tempModelDatPath
 Invoke-WebRequest -Uri $imageURL -OutFile $tempImagePath
@@ -286,11 +276,11 @@ $driverName = "Brother MFC-L6900DW series"
 try {
     $printerDriver = Get-PrinterDriver -Name $driverName -ErrorAction Stop
     if ($printerDriver) {
-        Write-Host "The printer driver '$driverName' is already installed."
+        Update-LogTextBox "The printer driver '$driverName' is already installed."
     }
 }
 catch {
-    Write-Warning "The printer driver '$driverName' is not installed. Installing the driver and printer..."
+    Update-LogTextBox "The printer driver '$driverName' is not installed. Installing the driver and printer..."
 
     # Define a template for the command (same as the old script)
     $commandTemplate = '/i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}" /qn /NORESTART'
@@ -310,13 +300,13 @@ catch {
             $logFilePath = Join-Path $tempDirectoryPath "printer-install.log"
 
             $arguments = $commandTemplate -f $tempMsiPath, $config.Name, $config.IPAddress
-            Write-Host "Executing command: msiexec $arguments"
+            Update-LogTextBox "Executing command: msiexec $arguments"
             $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
             $process.WaitForExit()
 
             if ($process.ExitCode -ne 0) {
                 $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
-                Write-Warning $errorMessage
+                Update-LogTextBox $errorMessage
                 Add-Content -Path $logFilePath -Value $errorMessage
                 Add-Content -Path $logFilePath -Value $process.StandardOutput
                 Add-Content -Path $logFilePath -Value $process.StandardError
@@ -326,7 +316,7 @@ catch {
 
             } else {
                 $message = "The $($config.Name) printer was installed."
-                Write-Host $message
+                Update-LogTextBox $message
 
                 # Update the PrintersInstalled.txt and PrinterUninstall.txt files
                 UpdatePrinterLogFiles $config.Name
@@ -343,7 +333,7 @@ catch {
     # If no matching IP address was found, log the error
     if (-not $matched) {
         $errorMessage = "No matching IP address found for printer installation."
-        Write-Warning $errorMessage
+        Update-LogTextBox $errorMessage
 
         # Show the failure notification
         Show-FailureNotification -printerName $config.Name
@@ -372,52 +362,9 @@ if ($printerDriver) {
 
             if (-not $existingPort) {
                 # Add the printer port
+                Update-LogTextBox "Adding printer port: $portName"
                 Add-PrinterPort -Name $portName -PrinterHostAddress "$($config.IPAddress)"
             }
 
             # Add the printer
-            Add-Printer -Name $config.Name -DriverName "Brother MFC-L6900DW series" -PortName $portName
-
-            $message = "The $($config.Name) printer was installed."
-            Write-Host $message
-
-            # Update the PrintersInstalled.txt and PrinterUninstall.txt files
-            UpdatePrinterLogFiles $config.Name
-
-            # Show the success notification
-            Show-SuccessNotification -printerName $config.Name
-
-            $matched = $true
-            break
-        }
-    }
-
-    # If no matching IP address was found, log the error
-    if (-not $matched) {
-        $errorMessage = "No matching IP address found for printer installation."
-        Write-Warning $errorMessage
-
-        # Show the failure notification
-        Show-FailureNotification -printerName $config.Name
-
-        Add-Content -Path $logFilePath -Value $errorMessage
-    }
-}
-
-try {
-    $processStartInfo = New-Object System.Diagnostics.ProcessStartInfo
-    $processStartInfo.FileName = "powershell.exe"
-    $processStartInfo.Arguments = "-ExecutionPolicy Bypass -File `"$schedTaskPath`""
-    $processStartInfo.Verb = "RunAs"
-
-    $process = [System.Diagnostics.Process]::Start($processStartInfo)
-    $process.WaitForExit()
-
-    if ($process.ExitCode -ne 0) {
-        Write-Warning "Failed to execute the scheduled task script with exit code: $($process.ExitCode)"
-    }
-}
-catch {
-    Write-Warning "Failed to execute the scheduled task script: $_"
-}
-
+            Update-LogTextBox "
