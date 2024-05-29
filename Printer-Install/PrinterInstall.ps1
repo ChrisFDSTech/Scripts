@@ -367,4 +367,49 @@ if ($printerDriver) {
             }
 
             # Add the printer
-            Update-LogTextBox "
+            Update-LogTextBox "Adding printer: $($config.Name)"
+            Add-Printer -Name $config.Name -DriverName "Brother MFC-L6900DW series" -PortName $portName
+
+            $message = "The $($config.Name) printer was installed."
+            Update-LogTextBox $message
+
+            # Update the PrintersInstalled.txt and PrinterUninstall.txt files
+            UpdatePrinterLogFiles $config.Name
+
+            # Show the success notification
+            Show-SuccessNotification -printerName $config.Name
+
+            $matched = $true
+            break
+        }
+    }
+
+    # If no matching IP address was found, log the error
+    if (-not $matched) {
+        $errorMessage = "No matching IP address found for printer installation."
+        Update-LogTextBox $errorMessage
+
+        # Show the failure notification
+        Show-FailureNotification -printerName $config.Name
+
+        Add-Content -Path $logFilePath -Value $errorMessage
+    }
+}
+
+try {
+    Update-LogTextBox "Executing scheduled task script..."
+    $processStartInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $processStartInfo.FileName = "powershell.exe"
+    $processStartInfo.Arguments = "-ExecutionPolicy Bypass -File `"$schedTaskPath`""
+    $processStartInfo.Verb = "RunAs"
+
+    $process = [System.Diagnostics.Process]::Start($processStartInfo)
+    $process.WaitForExit()
+
+    if ($process.ExitCode -ne 0) {
+        Update-LogTextBox "Failed to execute the scheduled task script with exit code: $($process.ExitCode)"
+    }
+}
+catch {
+    Update-LogTextBox "Failed to execute the scheduled task script: $_"
+}
