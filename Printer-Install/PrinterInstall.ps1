@@ -24,14 +24,30 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore
 "@
 
 # Create the window from the XAML markup
-$window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $xaml))
+try {
+    $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $xaml))
+}
+catch {
+    Write-Error "Failed to create WPF window: $_"
+    return
+}
 
 # Function to update the log text box
 function Update-LogTextBox($message) {
-    $window.Dispatcher.Invoke([Action]{
-        $window.logTextBox.AppendText("$message`n")
-        $window.logTextBox.ScrollToEnd()
-    }, "Normal")
+    if ($window -ne $null) {
+        try {
+            $window.Dispatcher.Invoke([Action]{
+                $window.logTextBox.AppendText("$message`n")
+                $window.logTextBox.ScrollToEnd()
+            }, "Normal")
+        }
+        catch {
+            Write-Error "Failed to update log text box: $_"
+        }
+    }
+    else {
+        Write-Output $message
+    }
 }
 
 # Function to show the installation window
