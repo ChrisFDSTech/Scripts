@@ -187,7 +187,7 @@ try {
     Invoke-WebRequest -Uri $schedTaskUrl -OutFile $schedTaskPath
 
     # Update the progress bar and stage text
-    Update-DataContext -Window $window -Stage $scriptStages[2] -Progress $scriptStages[3]
+    Update-DataContext -Window $window -Stage $scriptStages[3] -Progress $scriptStages[4]
 
     # Define the printer driver name
     $driverName = "Brother MFC-L6900DW series"
@@ -287,7 +287,7 @@ try {
                 UpdatePrinterLogFiles $config.Name
 
                 # Update the progress bar and stage text
-                Update-DataContext -Window $window -Stage $scriptStages[4] -Progress $scriptStages[5]
+                Update-DataContext -Window $window -Stage $scriptStages[5] -Progress $scriptStages[6]
 
                 $matched = $true
                 break
