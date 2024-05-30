@@ -12,8 +12,6 @@ $scriptStages = @(
     "Finishing Up", 100
 )
 
-
-
 # XAML Content (place this content within the script itself)
 $xaml = '<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Printer Installation" Height="300" Width="400" WindowStartupLocation="CenterScreen"><Grid><Grid.RowDefinitions><RowDefinition Height="70*"/><RowDefinition Height="*"/></Grid.RowDefinitions><Image Grid.Row="0" Source="C:\Path\To\YourCompanyLogo.png" Stretch="Fill"/><StackPanel Grid.Row="1" Margin="10"><TextBlock TextAlignment="Center" FontSize="16"><Run Text="Installing Printer..."/><LineBreak/></TextBlock><TextBlock TextAlignment="Center" FontSize="14" TextWrapping="Wrap"><Run Text="{Binding CurrentStage}"/></TextBlock><ProgressBar Grid.Row="2" IsIndeterminate="False" Minimum="0" Maximum="100" Value="{Binding ProgressValue}"/></StackPanel></Grid></Window>'
 
@@ -31,6 +29,22 @@ $window.DataContext = New-Object PSObject -Property @{
 # Show the Window (Modal)
 $window.ShowDialog() | Out-Null
 
+# Function to update the data context on the UI thread
+function Update-DataContext {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Windows.Window]$Window,
+        [Parameter(Mandatory = $true)]
+        [string]$Stage,
+        [Parameter(Mandatory = $true)]
+        [int]$Progress
+    )
+
+    $Window.Dispatcher.Invoke([System.Windows.Threading.DispatcherPriority]::Normal, [System.Action]{
+        $Window.DataContext.CurrentStage = $Stage
+        $Window.DataContext.ProgressValue = $Progress
+    })
+}
 
 try {
     # Define an array of hashtables with the printer configurations
@@ -119,8 +133,7 @@ try {
     $printerUninstallLogPath = Join-Path $tempDirectoryPath "PrinterUninstall.txt"
 
     # Update the progress bar and stage text
-    $window.DataContext.CurrentStage = $scriptStages[1]
-    $window.DataContext.ProgressValue = $scriptStages[2]
+    Update-DataContext -Window $window -Stage $scriptStages[1] -Progress $scriptStages[2]
 
     # Ensure the temp directory exists
     if (-not (Test-Path $directoryPath)) {
@@ -151,156 +164,143 @@ try {
     Invoke-WebRequest -Uri $schedTaskUrl -OutFile $schedTaskPath
 
     # Update the progress bar and stage text
-    $window.DataContext.CurrentStage = $scriptStages[2]
-    $window.DataContext.ProgressValue = $scriptStages[3]
+    Update-DataContext -Window $window -Stage $scriptStages[2] -Progress $scriptStages[3]
 
     # Define the printer driver name
-$driverName = "Brother MFC-L6900DW series"
+    $driverName = "Brother MFC-L6900DW series"
 
-# Check if the printer driver is installed
-try {
-    $printerDriver = Get-PrinterDriver -Name $driverName -ErrorAction Stop
-    if ($printerDriver) {
-        Write-Host "The printer driver '$driverName' is already installed."
+    # Check if the printer driver is installed
+    try {
+        $printerDriver = Get-PrinterDriver -Name $driverName -ErrorAction Stop
+        if ($printerDriver) {
+            Write-Host "The printer driver '$driverName' is already installed."
+        }
     }
-}
-catch {
-    Write-Warning "The printer driver '$driverName' is not installed. Installing the driver and printer..."
+    catch {
+        Write-Warning "The printer driver '$driverName' is not installed. Installing the driver and printer..."
 
-    # Define a template for the command (same as the old script)
-    $commandTemplate = '/i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}" /qn /NORESTART'
+        # Define a template for the command (same as the old script)
+        $commandTemplate = '/i "{0}" /quiet DRIVERNAME="Brother MFC-L6900DW series" PRINTERNAME="{1}" ISDEFAULTPRINTER="0" IPADDRESS="{2}" /qn /NORESTART'
 
-    # Get the current IP address of the machine
-    $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
+        # Get the current IP address of the machine
+        $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
 
-    # Truncate the current IP address to the first three octets
-    $TruncatedCurrentIPAddress = $CurrentIPAddress -replace '\.\d+$'
+        # Truncate the current IP address to the first three octets
+        $TruncatedCurrentIPAddress = $CurrentIPAddress -replace '\.\d+$'
 
-    # Iterate through the array to find a matching IP address and execute the command
-    $matched = $false
-    foreach ($config in $printerConfigs) {
-        # Truncate the IP address from the configurations to the first three octets
-        $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
-        if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
-	
-	
-            $logFilePath = Join-Path $tempDirectoryPath "printer-install.log"
+        # Iterate through the array to find a matching IP address and execute the command
+        $matched = $false
+        foreach ($config in $printerConfigs) {
+            # Truncate the IP address from the configurations to the first three octets
+            $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
+            if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
+                $logFilePath = Join-Path $tempDirectoryPath "printer-install.log"
 
-            $arguments = $commandTemplate -f $tempMsiPath, $config.Name, $config.IPAddress
-            Write-Host "Executing command: msiexec $arguments"
-            $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
-            $process.WaitForExit()
+                $arguments = $commandTemplate -f $tempMsiPath, $config.Name, $config.IPAddress
+                Write-Host "Executing command: msiexec $arguments"
+                $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $arguments -Wait -NoNewWindow -PassThru
+                $process.WaitForExit()
 
-            if ($process.ExitCode -ne 0) {
-                $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
-                Write-Warning $errorMessage
-                Add-Content -Path $logFilePath -Value $errorMessage
-                Add-Content -Path $logFilePath -Value $process.StandardOutput
-                Add-Content -Path $logFilePath -Value $process.StandardError
+                if ($process.ExitCode -ne 0) {
+                    $errorMessage = "Failed to install printer $($config.Name). Exit code: $($process.ExitCode)"
+                    Write-Warning $errorMessage
+                    Add-Content -Path $logFilePath -Value $errorMessage
+                    Add-Content -Path $logFilePath -Value $process.StandardOutput
+                    Add-Content -Path $logFilePath -Value $process.StandardError
+                } else {
+                    $message = "The $($config.Name) printer was installed."
+                    Write-Host $message
 
+                    # Update the PrintersInstalled.txt and PrinterUninstall.txt files
+                    UpdatePrinterLogFiles $config.Name
+                }
 
-            } else {
+                # Update the progress bar and stage text
+                Update-DataContext -Window $window -Stage $scriptStages[3] -Progress $scriptStages[4]
+
+                $matched = $true
+                break
+            }
+        }
+
+        # If no matching IP address was found, log the error
+        if (-not $matched) {
+            $errorMessage = "No matching IP address found for printer installation."
+            Write-Warning $errorMessage
+            Add-Content -Path $logFilePath -Value $errorMessage
+        }
+    }
+
+    # If the driver is already installed, proceed with adding the printer
+    if ($printerDriver) {
+        # Get the current IP address of the machine
+        $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
+
+        # Truncate the current IP address to the first three octets
+        $TruncatedCurrentIPAddress = $CurrentIPAddress -replace '\.\d+$'
+
+        # Iterate through the array to find a matching IP address and add the printer
+        $matched = $false
+        foreach ($config in $printerConfigs) {
+            # Truncate the IP address from the configurations to the first three octets
+            $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
+            if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
+                # Check if the printer port already exists
+                $portName = "IP_$($config.IPAddress)"
+                $existingPort = Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue
+
+                if (-not $existingPort) {
+                    # Add the printer port
+                    Add-PrinterPort -Name $portName -PrinterHostAddress "$($config.IPAddress)"
+                }
+
+                # Add the printer
+                Add-Printer -Name $config.Name -DriverName "Brother MFC-L6900DW series" -PortName $portName
+
                 $message = "The $($config.Name) printer was installed."
                 Write-Host $message
 
                 # Update the PrintersInstalled.txt and PrinterUninstall.txt files
                 UpdatePrinterLogFiles $config.Name
-                
-            }
 
                 # Update the progress bar and stage text
-                $window.DataContext.CurrentStage = $scriptStages[3]
-                $window.DataContext.ProgressValue = $scriptStages[4]
+                Update-DataContext -Window $window -Stage $scriptStages[4] -Progress $scriptStages[5]
 
-	        $matched = $true
-            break
+                $matched = $true
+                break
+            }
+        }
+
+        # If no matching IP address was found, log the error
+        if (-not $matched) {
+            $errorMessage = "No matching IP address found for printer installation."
+            Write-Warning $errorMessage
+
+            Add-Content -Path $logFilePath -Value $errorMessage
         }
     }
 
-    # If no matching IP address was found, log the error
-    if (-not $matched) {
-        $errorMessage = "No matching IP address found for printer installation."
-        Write-Warning $errorMessage
-        Add-Content -Path $logFilePath -Value $errorMessage
-    }
-}
+    try {
+        $processStartInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $processStartInfo.FileName = "powershell.exe"
+        $processStartInfo.Arguments = "-ExecutionPolicy Bypass -File `"$schedTaskPath`""
+        $processStartInfo.Verb = "RunAs"
 
-# If the driver is already installed, proceed with adding the printer
-if ($printerDriver) {
-    # Get the current IP address of the machine
-    $CurrentIPAddress = (Get-NetIPAddress | Where-Object { $_.AddressFamily -eq 'IPv4' -and $_.InterfaceAlias -notlike '*Loopback*' }).IPAddress
+        $process = [System.Diagnostics.Process]::Start($processStartInfo)
+        $process.WaitForExit()
 
-    # Truncate the current IP address to the first three octets
-    $TruncatedCurrentIPAddress = $CurrentIPAddress -replace '\.\d+$'
-
-    # Iterate through the array to find a matching IP address and add the printer
-    $matched = $false
-    foreach ($config in $printerConfigs) {
-        # Truncate the IP address from the configurations to the first three octets
-        $TruncatedConfigIPAddress = $config.IPAddress -replace '\.\d+$'
-        if ($TruncatedCurrentIPAddress -eq $TruncatedConfigIPAddress) {
-	
-            # Check if the printer port already exists
-            $portName = "IP_$($config.IPAddress)"
-            $existingPort = Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue
-
-            if (-not $existingPort) {
-                # Add the printer port
-                Add-PrinterPort -Name $portName -PrinterHostAddress "$($config.IPAddress)"
-            }
-
-            # Add the printer
-            Add-Printer -Name $config.Name -DriverName "Brother MFC-L6900DW series" -PortName $portName
-
-            $message = "The $($config.Name) printer was installed."
-            Write-Host $message
-
-            # Update the PrintersInstalled.txt and PrinterUninstall.txt files
-            UpdatePrinterLogFiles $config.Name
-            
-                # Update the progress bar and stage text
-                $window.DataContext.CurrentStage = $scriptStages[4]
-                $window.DataContext.ProgressValue = $scriptStages[5]
-
-            $matched = $true
-            break
+        if ($process.ExitCode -ne 0) {
+            Write-Warning "Failed to execute the scheduled task script with exit code: $($process.ExitCode)"
         }
     }
-
-  
-    # If no matching IP address was found, log the error
-    if (-not $matched) {
-        $errorMessage = "No matching IP address found for printer installation."
-        Write-Warning $errorMessage
-
-        Add-Content -Path $logFilePath -Value $errorMessage
+    catch {
+        Write-Warning "Failed to execute the scheduled task script: $_"
     }
-}
 
-try {
-    $processStartInfo = New-Object System.Diagnostics.ProcessStartInfo
-    $processStartInfo.FileName = "powershell.exe"
-    $processStartInfo.Arguments = "-ExecutionPolicy Bypass -File `"$schedTaskPath`""
-    $processStartInfo.Verb = "RunAs"
-
-    $process = [System.Diagnostics.Process]::Start($processStartInfo)
-    $process.WaitForExit()
-
-    if ($process.ExitCode -ne 0) {
-        Write-Warning "Failed to execute the scheduled task script with exit code: $($process.ExitCode)"
-    }
-}
-catch {
-    Write-Warning "Failed to execute the scheduled task script: $_"
-}
-
-                # Update the progress bar and stage text
-                $window.DataContext.CurrentStage = $scriptStages[5]
-                $window.DataContext.ProgressValue = $scriptStages[6]
-
+    # Update the progress bar and stage text for the final stage
+    Update-DataContext -Window $window -Stage $scriptStages[5] -Progress $scriptStages[6]
 }
 finally {
     # Ensure Window Closure
     $window.Close()
 }
-            
