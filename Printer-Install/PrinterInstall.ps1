@@ -12,17 +12,15 @@ $scriptStages = @(
     "Finishing Up", 100
 )
 
+
+
+# XAML Content (place this content within the script itself)
+$xaml = '<Window x:Class="LoadingScreen.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Printer Installation" Height="300" Width="400" WindowStartupLocation="CenterScreen"><Grid><Grid.RowDefinitions><RowDefinition Height="70*"/><RowDefinition Height="*"/></Grid.RowDefinitions><Image Grid.Row="0" Source="C:\Path\To\YourCompanyLogo.png" Stretch="Fill"/><StackPanel Grid.Row="1" Margin="10"><TextBlock TextAlignment="Center" FontSize="16"><Run Text="Installing Printer..."/><LineBreak/></TextBlock><TextBlock TextAlignment="Center" FontSize="14" TextWrapping="Wrap"><Run Text="{Binding CurrentStage}"/></TextBlock><ProgressBar Grid.Row="2" IsIndeterminate="False" Minimum="0" Maximum="100" Value="{Binding ProgressValue}"/></StackPanel></Grid></Window>'
+
+# Load XAML into a Window Object
 $xmlDoc = New-Object System.Xml.XmlDocument
 $xmlDoc.LoadXml($xaml)
 $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $xmlDoc))
-
-# XAML Content (place this content within the script itself)
-$xaml = @"
-<Window x:Class="LoadingScreen.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Printer Installation" Height="300" Width="400" WindowStartupLocation="CenterScreen"><Grid><Grid.RowDefinitions><RowDefinition Height="70*"/><RowDefinition Height="*"/></Grid.RowDefinitions><Image Grid.Row="0" Source="C:\Path\To\YourCompanyLogo.png" Stretch="Fill"/><StackPanel Grid.Row="1" Margin="10"><TextBlock TextAlignment="Center" FontSize="16"><Run Text="Installing Printer..."/><LineBreak/></TextBlock><TextBlock TextAlignment="Center" FontSize="14" TextWrapping="Wrap"><Run Text="{Binding CurrentStage}"/></TextBlock><ProgressBar Grid.Row="2" IsIndeterminate="False" Minimum="0" Maximum="100" Value="{Binding ProgressValue}"/></StackPanel></Grid></Window>
-"@
-
-# Load XAML into a Window Object
-$window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $xaml))
 
 # Set Data Context with Initial Stage and Progress
 $window.DataContext = New-Object PSObject -Property @{
