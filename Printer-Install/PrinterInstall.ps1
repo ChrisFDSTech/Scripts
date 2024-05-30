@@ -37,6 +37,7 @@ $xaml = @"
 "@
 
 
+
 # Load XAML into a Window Object
 $xmlDoc = New-Object System.Xml.XmlDocument
 $xmlDoc.LoadXml($xaml)
