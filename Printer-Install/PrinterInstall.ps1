@@ -4,12 +4,12 @@ Add-Type -AssemblyName PresentationFramework
 
 # Define Script Stages and Estimated Progress per Stage (adjust as needed)
 $scriptStages = @(
-    "Preparing Printer Install", 10,
-    "Downloading Files", 20,
-    "Installing Printer Driver", 40,
-    "Adding Printer", 70,
-    "Configuring Scheduled Task", 90,
-    "Finishing Up", 100
+    @{ Stage = "Preparing Printer Install"; Progress = 10 },
+    @{ Stage = "Downloading Files"; Progress = 20 },
+    @{ Stage = "Installing Printer Driver"; Progress = 40 },
+    @{ Stage = "Adding Printer"; Progress = 70 },
+    @{ Stage = "Configuring Scheduled Task"; Progress = 90 },
+    @{ Stage = "Finishing Up"; Progress = 100 }
 )
 
 $xaml = @"
@@ -45,8 +45,8 @@ $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader
 
 # Set Data Context with Initial Stage and Progress
 $window.DataContext = New-Object PSObject -Property @{
-  CurrentStage = $scriptStages[0]
-  ProgressValue = $scriptStages[1]
+  CurrentStage = $scriptStages[0].Stage
+  ProgressValue = $scriptStages[0].Progress
 }
 
 # Show the Window (Modal)
@@ -155,8 +155,9 @@ try {
     $printerInstalledLogPath = Join-Path $tempDirectoryPath "PrintersInstalled.txt"
     $printerUninstallLogPath = Join-Path $tempDirectoryPath "PrinterUninstall.txt"
 
-    # Update the progress bar and stage text
-    Update-DataContext -Window $window -Stage $scriptStages[1] -Progress $scriptStages[2]
+    # Update progress for preparing printer install
+    Update-DataContext -Window $window -Stage $scriptStages[0].Stage -Progress $scriptStages[0].Progress
+    Start-Sleep -Seconds 2
 
     # Ensure the temp directory exists
     if (-not (Test-Path $directoryPath)) {
@@ -187,7 +188,7 @@ try {
     Invoke-WebRequest -Uri $schedTaskUrl -OutFile $schedTaskPath
 
     # Update the progress bar and stage text
-    Update-DataContext -Window $window -Stage $scriptStages[3] -Progress $scriptStages[4]
+    Update-DataContext -Window $window -Stage $scriptStages[1].Stage -Progress $scriptStages[1].Progress
 
     # Define the printer driver name
     $driverName = "Brother MFC-L6900DW series"
@@ -239,7 +240,7 @@ try {
                 }
 
                 # Update the progress bar and stage text
-                Update-DataContext -Window $window -Stage $scriptStages[3] -Progress $scriptStages[4]
+                Update-DataContext -Window $window -Stage $scriptStages[2].Stage -Progress $scriptStages[2].Progress
 
                 $matched = $true
                 break
@@ -287,7 +288,7 @@ try {
                 UpdatePrinterLogFiles $config.Name
 
                 # Update the progress bar and stage text
-                Update-DataContext -Window $window -Stage $scriptStages[5] -Progress $scriptStages[6]
+                 Update-DataContext -Window $window -Stage "Installing $($printerConfig.Name)" -Progress $scriptStages[3].Progress
 
                 $matched = $true
                 break
@@ -302,7 +303,9 @@ try {
             Add-Content -Path $logFilePath -Value $errorMessage
         }
     }
-
+    
+            Update-DataContext -Window $window -Stage $scriptStages[4].Stage -Progress $scriptStages[4].Progress
+            
     try {
         $processStartInfo = New-Object System.Diagnostics.ProcessStartInfo
         $processStartInfo.FileName = "powershell.exe"
@@ -320,10 +323,15 @@ try {
         Write-Warning "Failed to execute the scheduled task script: $_"
     }
 
-    # Update the progress bar and stage text for the final stage
-    Update-DataContext -Window $window -Stage $scriptStages[5] -Progress $scriptStages[6]
+
+    # Finalize installation
+    Update-DataContext -Window $window -Stage $scriptStages[5].Stage -Progress $scriptStages[5].Progress
+    Start-Sleep -Seconds 2
+    
 }
 finally {
     # Ensure Window Closure
-    $window.Close()
+        # Close the window after completion
+    $window.Dispatcher.Invoke([System.Windows.Threading.DispatcherPriority]::Normal, [System.Action]{$window.Close()})
+
 }
