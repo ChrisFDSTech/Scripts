@@ -49,7 +49,7 @@ $printerConfigs = @(
     @{ Name = 'West Cumberland'; IPAddress = '192.168.92.200' },
     @{ Name = 'West Fayetteville'; IPAddress = '192.168.204.200' },
     @{ Name = 'Woodgreen'; IPAddress = '192.168.64.200' },
-    @{ Name = 'Zebulon Green'; IPAddress = '192.168.103.200' },
+    @{ Name = 'Zebulon Green'; IPAddress = '192.168.103.200' }
    )
 
 # Function to update the PrintersInstalled.txt and PrinterUninstall.txt files
