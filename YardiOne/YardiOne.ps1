@@ -2,7 +2,7 @@
 
 
 # Define the GitHub URLs for the files
-$Icon = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/YardiOne/YardiOne.ico"
+$Icon = "https://raw.githubusercontent.com/ChrisFDSTech/Scripts/main/YardiOne/YardiOne.ico?token=GHSAT0AAAAAACT37TNXBQPGWQQ7T4NPUBKYZTURP5A"
 
 # Define the directory
 $directoryName = "FDS\Icons"
