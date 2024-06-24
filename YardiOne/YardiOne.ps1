@@ -13,11 +13,22 @@ $WebAddress = "https://www.yardiasp13.com/80032dth"
 $ShortcutName = "YardiOne.lnk"
 $ShortcutPath = Join-Path -Path ([Environment]::GetFolderPath("CommonDesktopDirectory")) -ChildPath $ShortcutName
 
-# Start logging
-$logPath = "C:\PS\$PackageName_$(Get-Date -Format 'MM-dd-yyyy_HH:mm').log"
-Start-Transcript -Path $logPath -Append
+# Start logging if any part of the process fails
+$logPath = "C:\FDSLogs"
+if (-not (Test-Path $logPath)) {
+    try {
+        New-Item -ItemType Directory -Path $logPath -Force | Out-Null
+    }
+    catch {
+        Write-Host "Failed to create directory: $logPath"
+        Start-Transcript -Path (Join-Path -Path $env:ProgramData -ChildPath "$($PackageName)_$(Get-Date -Format 'MM-dd-yyyy_HH:mm:ss').txt") -Append
+    }
+}
+else {
+    Start-Transcript -Path (Join-Path -Path $logPath -ChildPath "$($PackageName)_$(Get-Date -Format 'MM-dd-yyyy_HH:mm:ss').txt") -Append
+}
 
-# Ensure the temp FDS directory exists
+# Create the directory
 if (-not (Test-Path $directoryPath)) {
     try {
         Write-Host "Creating directory: $directoryPath"
@@ -25,7 +36,6 @@ if (-not (Test-Path $directoryPath)) {
     }
     catch {
         Write-Warning "Failed to create directory: $directoryPath"
-        Write-Warning $_.Exception.Message
     }
 }
 
@@ -36,7 +46,6 @@ try {
 }
 catch {
     Write-Warning "Failed to download icon file from: $Icon"
-    Write-Warning $_.Exception.Message
 }
 
 # Create the desktop shortcut using WScript.Shell
@@ -48,15 +57,15 @@ try {
     $ShortCut.IconLocation = $iconPath
     $ShortCut.Description = "YardiOne"
     $ShortCut.Save()
-    Write-Host "Desktop shortcut created: $ShortcutPath"
 }
 catch {
     Write-Warning "Failed to create desktop shortcut: $ShortcutPath"
-    Write-Warning $_.Exception.Message
 }
 
 # Stop logging
 Stop-Transcript
+
+
 
 
 
