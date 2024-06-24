@@ -39,11 +39,16 @@ catch {
     Write-Warning $_.Exception.Message
 }
 
-# Create the desktop shortcut
+# Create the desktop shortcut using WScript.Shell
 $iconPath = Join-Path -Path $directoryPath -ChildPath "YardiOne.ico"
 try {
-    $shortcut = New-Shortcut -Path $shortcutPath -TargetPath $WebAddress -IconLocation $iconPath -Description "YardiOne"
-    Write-Host "Desktop shortcut created: $($shortcut.FullName)"
+    $Shell = New-Object -ComObject ("WScript.Shell")
+    $ShortCut = $Shell.CreateShortcut($ShortcutPath)
+    $ShortCut.TargetPath = $WebAddress
+    $ShortCut.IconLocation = $iconPath
+    $ShortCut.Description = "YardiOne"
+    $ShortCut.Save()
+    Write-Host "Desktop shortcut created: $ShortcutPath"
 }
 catch {
     Write-Warning "Failed to create desktop shortcut: $ShortcutPath"
