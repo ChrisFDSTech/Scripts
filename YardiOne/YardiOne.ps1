@@ -28,13 +28,18 @@ if (-not (Test-Path $directoryPath)) {
 # Download the ico file from GitHub to the FDS Directory
 Invoke-WebRequest -Uri $Icon -OutFile (Join-Path -Path $directoryPath -ChildPath "YardiOne.ico")
 
+# Create the desktop shortcut
+$iconPath = Join-Path -Path $directoryPath -ChildPath "YardiOne.ico"
+$shortcut = New-Shortcut -Path $shortcutPath -TargetPath $WebAddress -IconLocation $iconPath -Description "YardiOne"
+
+<#
 $Shell = New-Object -ComObject ("WScript.Shell")
 $ShortCut = $Shell.CreateShortcut($ShortcutPath)
 $ShortCut.TargetPath = $WebAddress
 $ShortCut.IconLocation = (Join-Path -Path $directoryPath -ChildPath "YardiOne.ico")
 $ShortCut.Description = "YardiOne"
 $ShortCut.Save()
-
+#>
 
 
 
