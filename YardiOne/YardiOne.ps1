@@ -14,7 +14,7 @@ $ShortcutName = "YardiOne.lnk"
 $ShortcutPath = Join-Path -Path ([Environment]::GetFolderPath("CommonDesktopDirectory")) -ChildPath $ShortcutName
 
 # Start logging
-$logPath = "C:\PS\YardiOneShortcut_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$logPath = "C:\PS\YardiOneShortcut_$(Get-Date -Format 'MM-dd-yyyy_HH:mm').log"
 Start-Transcript -Path $logPath -Append
 
 # Ensure the temp FDS directory exists
